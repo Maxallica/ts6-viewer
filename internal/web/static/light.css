@@ -11,7 +11,7 @@ body {
 h1, h2 {
     margin: 10px 0;
     text-align: center;
-    font-size: 18px;
+    font-size: 24px;
     font-weight: 700;
     color: #000;
     line-height: 20px;
@@ -24,7 +24,6 @@ h1, h2 {
     background: #ffffff;
     border: 1px solid #ccc;
     padding: 6px 12px;
-    border-radius: 6px;
     font-size: 14px;
     font-weight: bold;
     color: #000;
@@ -39,7 +38,6 @@ h1, h2 {
     padding: 8px 12px;
     background: #ffffff;
     border: 1px solid #ccc;
-    border-radius: 6px;
     color: #333;
     font-size: 16px;
     line-height: 16px;

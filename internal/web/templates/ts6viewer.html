@@ -45,9 +45,9 @@
     🔄 <span id="refreshButtonText">{{.RefreshInterval}}</span>
 </button>
 
-<h1 id="server-name">{{.Server.Name}}</h1>
-
 <div class="server-info">
+    <h1 id="server-name">{{.Server.Name}}</h1>
+
     <div><span>User: </span> {{.Server.ClientsOnline}} / {{.Server.MaxClients}}</div>
     <div><span>Client Connections:</span> {{.Server.ClientConnections}}</div>
     <div><span>Uptime:</span> {{.Server.UptimePretty}}</div>

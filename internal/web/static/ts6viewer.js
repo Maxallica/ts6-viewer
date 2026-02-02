@@ -112,9 +112,9 @@ async function fetchViewerData() {
 // Update server info box
 // ==========================================
 function updateServerInfo(server) {
-    document.getElementById("server-name").textContent = server.Name;
-
     document.querySelector(".server-info").innerHTML = `
+        <h1 id='server-name'>${server.Name}</h1>
+
         <div><span>User: </span> ${server.ClientsOnline} / ${server.MaxClients}</div>
         <div><span>Client Connections:</span> ${server.ClientConnections}</div>
         <div><span>Uptime:</span> ${server.UptimePretty}</div>
@@ -122,7 +122,6 @@ function updateServerInfo(server) {
         <div><a href="${server.HostBannerURL}">${server.HostBannerURL}</a></div>
     `;
 }
-
 
 // ==========================================
 // Render channel tree
