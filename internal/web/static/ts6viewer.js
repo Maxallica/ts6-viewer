@@ -23,11 +23,30 @@ setInterval(() => {
 // ==========================================
 function repeatToWidth(element) {
     const pattern = element.dataset.pattern;
-    if (!pattern) return;
 
-    const width = element.clientWidth;
-    const charWidth = getCharWidth(element);
-    const repeatCount = Math.ceil(width / (pattern.length * charWidth));
+    element.style.display = "block";
+    element.style.width = "100%";
+
+    const rectWidth = element.getBoundingClientRect().width;
+    const parentWidth = element.parentElement.getBoundingClientRect().width;
+    const offsetWidth = element.offsetWidth;
+    const clientWidth = element.clientWidth;
+
+    const measure = document.createElement("span");
+    measure.style.visibility = "hidden";
+    measure.style.whiteSpace = "pre";
+    measure.style.position = "absolute";
+    measure.style.font = getComputedStyle(element).font;
+    measure.textContent = pattern;
+    document.body.appendChild(measure);
+
+    const patternWidth = measure.getBoundingClientRect().width;
+
+    measure.remove();
+
+    const targetWidth = rectWidth || parentWidth || offsetWidth || clientWidth;
+    
+    const repeatCount = Math.ceil(targetWidth / patternWidth);
 
     element.textContent = pattern.repeat(repeatCount);
 }
@@ -45,7 +64,29 @@ function getCharWidth(element) {
 }
 
 function updateAllSpacers() {
-    document.querySelectorAll(".full-width").forEach(repeatToWidth);
+    document.querySelectorAll(".repeat").forEach(repeatToWidth);
+}
+
+function debug(msg) {
+    let box = document.getElementById("debugBox");
+    if (!box) {
+        box = document.createElement("div");
+        box.id = "debugBox";
+        box.style.position = "fixed";
+        box.style.bottom = "0";
+        box.style.left = "0";
+        box.style.right = "0";
+        box.style.background = "rgba(0,0,0,0.85)";
+        box.style.color = "#0f0";
+        box.style.fontSize = "12px";
+        box.style.padding = "6px";
+        box.style.zIndex = "999999";
+        box.style.maxHeight = "40vh";
+        box.style.overflowY = "auto";
+        box.style.fontFamily = "monospace";
+        document.body.appendChild(box);
+    }
+    box.innerHTML += msg + "<br>";
 }
 
 
@@ -78,7 +119,7 @@ function updateServerInfo(server) {
         <div><span>Client Connections:</span> ${server.ClientConnections}</div>
         <div><span>Uptime:</span> ${server.UptimePretty}</div>
         <div><span>ChannelsOnline:</span> ${server.ChannelsOnline}</div>
-        <div><span>HostBannerURL:</span> <a href="${server.HostBannerURL}">${server.HostBannerURL}</a></div>
+        <div><a href="${server.HostBannerURL}">${server.HostBannerURL}</a></div>
     `;
 }
 
@@ -89,7 +130,9 @@ function updateServerInfo(server) {
 function updateChannelTree(tree) {
     const container = document.getElementById("channels");
     container.innerHTML = renderChannels(tree);
+    requestAnimationFrame(updateAllSpacers);
 }
+
 
 function renderChannels(nodes) {
     let html = "";
@@ -100,6 +143,10 @@ function renderChannels(nodes) {
 }
 
 function renderChannel(ch) {
+    if (ch.Type === 8) {
+        return '<div class="row spacer blank-spacer"></div>';
+    }
+
     const typeClass = ch.Type === 0 ? "channel" : "spacer";
 
     const alignClassName =
@@ -109,13 +156,13 @@ function renderChannel(ch) {
 
     let html = '<div class="row ' + typeClass;
 
-    if (ch.FullWidth) {
-        html += ' full-width spacer-mono';
+    if (ch.Repeat) {
+        html += ' repeat spacer-mono';
     }
 
     html += ' ' + alignClassName + '"';
 
-    if (ch.FullWidth) {
+    if (ch.Repeat) {
         html += ' data-pattern="' + ch.Name + '"';
     }
 
@@ -147,7 +194,17 @@ function renderChannel(ch) {
 // ==========================================
 window.addEventListener("load", () => {
     fetchViewerData();
-    updateAllSpacers();
+    requestAnimationFrame(updateAllSpacers);
 });
 
-window.addEventListener("resize", updateAllSpacers);
+let resizeTimer = null;
+
+window.addEventListener("resize", () => {
+    if (resizeTimer) clearTimeout(resizeTimer);
+
+    resizeTimer = setTimeout(() => {
+        requestAnimationFrame(() => {
+            updateAllSpacers();
+        });
+    }, 150);
+});

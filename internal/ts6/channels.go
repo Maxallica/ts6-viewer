@@ -22,9 +22,9 @@ type Channel struct {
 	NeededTalkPower   string `json:"channel_needed_talk_power"`
 
 	// Additional informations, that wil added after response parsing
-	Type      ChannelType `json:"-"`
-	Align     Aligned     `json:"-"`
-	FullWidth bool        `json:"-"`
+	Type   ChannelType `json:"-"`
+	Align  Aligned     `json:"-"`
+	Repeat bool        `json:"-"`
 
 	Children []*Channel `json:"-"`
 
@@ -83,11 +83,11 @@ func GetChannelList(baseURL, apiKey string, serverID string) ([]Channel, error) 
 	for i := range resp.Body {
 		ch := &resp.Body[i]
 
-		chType, align, fullWidth, resolved := ParseChannelName(ch.Name)
+		chType, align, repeat, resolved := ParseChannelName(ch.Name)
 
 		ch.Type = chType
 		ch.Align = align
-		ch.FullWidth = fullWidth
+		ch.Repeat = repeat
 		ch.Name = resolved
 	}
 
@@ -136,42 +136,45 @@ func buildChannelTree(clients []Client, channels []Channel) []*Channel {
 	return roots
 }
 
+var reCmd = regexp.MustCompile(`(?i)\[([clr]|\*)?spacer([^\]]*?)\]`)
+
 // ParseChannelName parses TeamSpeak spacer syntax.
-// It removes spacer commands and expands spacer patterns to a fixed width.
 func ParseChannelName(name string) (ChannelType, Aligned, bool, string) {
 	name = strings.TrimSpace(name)
 
-	reCmd := regexp.MustCompile(`(?i)\[(c|l|r)?spacer\d*\]`)
 	cmd := reCmd.FindStringSubmatch(name)
-
 	if len(cmd) > 0 {
+
+		// Alignment
 		align := AlignLeft
-		if len(cmd) > 1 {
-			switch strings.ToLower(cmd[1]) {
-			case "c":
-				align = AlignCenter
-			case "r":
-				align = AlignRight
-			}
+		switch strings.ToLower(cmd[1]) {
+		case "c":
+			align = AlignCenter
+		case "r":
+			align = AlignRight
 		}
 
-		// Remove TS spacer command only
+		// Repeat durch * im Command?
+		repeat := strings.ToLower(cmd[1]) == "*"
+
+		// Text hinter [xSpacer...] extrahieren
 		clean := strings.TrimSpace(reCmd.ReplaceAllString(name, ""))
 
 		// Blank spacer
 		if clean == "" {
-			return BlankSpacer, align, false, ""
+			return BlankSpacer, align, repeat, ""
 		}
 
-		// Line spacer (___ --- ...)
+		// Solid spacer (___ --- ... -.- -..) → IMMER repeat = true
 		if isSpacerPattern(clean) {
 			return SolidSpacer, align, true, clean
 		}
 
-		// Aligned spacer with text
-		return AlignedSpacer, align, false, clean
+		// Aligned spacer mit Text
+		return AlignedSpacer, align, repeat, clean
 	}
 
+	// Normal channel
 	return NormalChannel, AlignLeft, false, name
 }
 
@@ -182,26 +185,4 @@ func isSpacerPattern(s string) bool {
 	default:
 		return false
 	}
-}
-
-// repeatToWidth repeats a spacer pattern until a fixed width is filled.
-// Width is approximated using a monospace character width.
-func repeatToWidth(pattern string, targetPx int) string {
-	const charWidth = 8 // px per character (approximation)
-
-	if pattern == "" {
-		return ""
-	}
-
-	patternWidth := len([]rune(pattern)) * charWidth
-	if patternWidth == 0 {
-		return pattern
-	}
-
-	repeats := targetPx / patternWidth
-	if repeats < 1 {
-		repeats = 1
-	}
-
-	return strings.Repeat(pattern, repeats)
 }

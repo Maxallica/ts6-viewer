@@ -2,113 +2,174 @@ body {
     font-family: 'Roboto', sans-serif;
     background: #121212;
     color: #e5e5e5;
-    padding: 0;
     margin: 0;
-    font-size: 13px;
+    padding: 0;
+    font-size: 14px;
+    line-height: 16px;
 }
 
 h1, h2 {
-    margin: 6px 0;
-    padding-left: 6px;
-    font-size: 15px;
-    font-weight: bold;
+    margin: 10px 0;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 700;
     color: #ffffff;
+    line-height: 20px;
 }
 
 #refreshButton {
-    cursor: default!important;
     position: fixed;
-    top: 8px;
-    right: 8px;
+    top: 10px;
+    right: 10px;
     background: #1f1f1f;
     border: 1px solid #333;
-    padding: 6px 10px;
-    border-radius: 4px;
+    padding: 6px 12px;
+    border-radius: 6px;
     font-size: 14px;
     font-weight: bold;
     color: #e5e5e5;
-    z-index: 999;
+    z-index: 9999;
+    line-height: 16px;
 }
 
-#refreshButtonText {
-    font-weight: bold;
+.server-info {
+    width: 100%;
+    max-width: 300px;
+    margin: 12px auto;
+    padding: 8px 12px;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 6px;
+    color: #ccc;
+    font-size: 16px;
+    line-height: 16px;
+    text-align: center;
+}
+
+.server-info div {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 3px 0;
+}
+
+.server-info span {
+    font-weight: 600;
+    color: #bbb;
+}
+
+.server-info a {
+    color: #6aa9ff;
+    text-decoration: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#channels {
+    width: 100%;
+    padding: 10px;
+    box-sizing: border-box;
 }
 
 .row {
-    white-space: pre;
+    display: block;
+    width: 100%;
+    padding: 2px 0;
+    box-sizing: border-box;
+    white-space: pre-wrap;
     line-height: 16px;
-    font-size: 13px;
-    padding-left: 6px;
-    color: #e5e5e5;
-}
-
-.row.spacer {
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-}
-
-.row.spacer.full-width {
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-}
-
-.row.client {
-    white-space: normal;
-    color: #ffffff;
 }
 
 .channel {
     color: #ffffff;
-    padding-left: 10px;
+    padding-left: 16px;
+    line-height: 16px;
+}
+
+.client {
+    color: #ffffff;
+    white-space: normal;
+    line-height: 16px;
+    position: relative;
+    padding-left: 26px;
+}
+
+.status-dot {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 12px;
+    height: 12px;
+    background-color: #4CAF50;
+    border-radius: 50%;
 }
 
 .spacer {
     color: #888;
-    white-space: pre;
     font-weight: bold;
-    font-family: 'Roboto', sans-serif;
+    width: 100%;
+    display: block;
     line-height: 16px;
 }
 
 .spacer-mono {
     font-family: "Courier New", monospace;
+    overflow: hidden;
+    white-space: nowrap;
+    line-height: 16px;
 }
 
-.spacer-left { text-align: left; }
+.spacer-left   { text-align: left; }
 .spacer-center { text-align: center; }
-.spacer-right { text-align: right; }
+.spacer-right  { text-align: right; }
+
+.blank-spacer {
+    height: 16px;
+    display: block;
+}
 
 .children {
-    margin-left: 10px;
+    margin-left: 12px;
 }
 
-.server-info {
-    margin: 6px;
-    padding: 6px;
-    border: 1px solid #333;
-    background: #1a1a1a;
-    font-size: 12px;
-    color: #ccc;
+@media (min-width: 600px) {
+    body {
+        font-size: 13px;
+    }
+
+    #channels {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .server-info {
+        max-width: 800px;
+        font-size: 20px;
+    }
+
+    .children {
+        margin-left: 20px;
+    }
 }
 
-.server-info span {
-    display: inline-block;
-    width: 150px;
-    color: #bbb;
-}
+@media (max-width: 600px) {
+    .status-dot {
+        width: 12px;
+        height: 12px;
+    }
 
-.client {
-    padding-left: 10px;
-    color: #ffffff;
-}
+    .server-info {
+        max-width: 90%;
+        font-size: 16px;
+        padding: 10px 14px;
+    }
 
-.status-dot {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    background-color: #4CAF50;
-    border-radius: 50%;
-    margin-right: 6px;
-    position: relative;
-    top: -1px;
+    .server-info div {
+        padding: 3px 0;
+    }
+
+    .server-info a {
+        max-width: 160px;
+    }
 }

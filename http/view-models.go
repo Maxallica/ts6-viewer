@@ -24,10 +24,10 @@ type ClientView struct {
 }
 
 type ChannelView struct {
-	Name      string
-	Type      ts6.ChannelType
-	Align     ts6.Aligned
-	FullWidth bool
-	Clients   []*ClientView
-	Children  []*ChannelView
+	Name     string
+	Type     ts6.ChannelType
+	Align    ts6.Aligned
+	Repeat   bool
+	Clients  []*ClientView
+	Children []*ChannelView
 }

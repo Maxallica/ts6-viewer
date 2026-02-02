@@ -1,11 +1,11 @@
 {{define "channel"}}
 <div class="row
     {{if eq .Type 0}}channel{{else}}spacer{{end}}
-    {{if .FullWidth}} full-width spacer-mono{{end}}
+    {{if .Repeat}} repeat spacer-mono{{end}}
     {{if eq .Align 0}} spacer-left
     {{else if eq .Align 1}} spacer-center
     {{else}} spacer-right{{end}}"
-    {{if .FullWidth}}data-pattern="{{.Name}}"{{end}}>
+    {{if .Repeat}}data-pattern="{{.Name}}"{{end}}>
 {{- .Name -}}
 </div>
 
@@ -52,7 +52,7 @@
     <div><span>Client Connections:</span> {{.Server.ClientConnections}}</div>
     <div><span>Uptime:</span> {{.Server.UptimePretty}}</div>
     <div><span>ChannelsOnline:</span> {{.Server.ChannelsOnline}}</div>
-    <div><span>HostBannerURL:</span> <a href="{{.Server.HostBannerURL}}">{{.Server.HostBannerURL}}</a></div>
+    <div><a href="{{.Server.HostBannerURL}}">{{.Server.HostBannerURL}}</a></div>
 </div>
 
 <div id="channels">

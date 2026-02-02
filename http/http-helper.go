@@ -82,10 +82,10 @@ func mapClient(c *ts6.Client) *ClientView {
 
 func mapChannel(ch *ts6.Channel) *ChannelView {
 	out := &ChannelView{
-		Name:      ch.Name,
-		Type:      ch.Type,
-		Align:     ch.Align,
-		FullWidth: ch.FullWidth,
+		Name:   ch.Name,
+		Type:   ch.Type,
+		Align:  ch.Align,
+		Repeat: ch.Repeat,
 	}
 
 	for _, c := range ch.Clients {
