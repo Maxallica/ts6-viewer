@@ -63,6 +63,20 @@ h1, h2 {
     white-space: nowrap;
 }
 
+.banner-url {
+    display: block;
+    width: 100%;
+    text-align: center;
+    padding: 4px 0;
+}
+
+.banner-url a {
+    display: inline-block;
+    color: #6aa9ff;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
 #channels {
     width: 100%;
     padding: 10px;
@@ -165,9 +179,5 @@ h1, h2 {
 
     .server-info div {
         padding: 3px 0;
-    }
-
-    .server-info a {
-        max-width: 160px;
     }
 }

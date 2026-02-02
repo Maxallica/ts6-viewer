@@ -51,16 +51,30 @@ h1, h2 {
     padding: 3px 0;
 }
 
-.server-info span {
-    font-weight: 600;
-    color: #bbb;
-}
-
 .server-info a {
     color: #6aa9ff;
     text-decoration: none;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.banner-url {
+    display: block;
+    width: 100%;
+    text-align: center;
+    padding: 4px 0;
+}
+
+.banner-url a {
+    display: inline-block;
+    color: #6aa9ff;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.server-info span {
+    font-weight: 600;
+    color: #bbb;
 }
 
 #channels {
@@ -165,9 +179,5 @@ h1, h2 {
 
     .server-info div {
         padding: 3px 0;
-    }
-
-    .server-info a {
-        max-width: 160px;
     }
 }

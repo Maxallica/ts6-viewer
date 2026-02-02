@@ -119,7 +119,7 @@ function updateServerInfo(server) {
         <div><span>Client Connections:</span> ${server.ClientConnections}</div>
         <div><span>Uptime:</span> ${server.UptimePretty}</div>
         <div><span>ChannelsOnline:</span> ${server.ChannelsOnline}</div>
-        <div><a href="${server.HostBannerURL}">${server.HostBannerURL}</a></div>
+        <div><div class='.banner-url'><a href="${server.HostBannerURL}">${server.HostBannerURL}</a></div></div>
     `;
 }
 
