@@ -1,0 +1,24 @@
+{
+  "_comment": "TS6 Viewer Configuration File",
+  "_comment2": "Rename this file to config.json and adjust the values to your setup.",
+
+  "server_port": "${SERVER_PORT}",
+  "_comment_server_port": "The port on which the TS6 Viewer web interface will be available. Usually '8080'",
+
+  "theme": "${THEME}",
+  "_comment_theme": "Choose between 'light' or 'dark' for the viewer theme. Usually 'dark'",
+
+  "refresh_interval": "${REFRESH_INTERVAL}",
+  "_comment_refresh_interval": "How often the viewer should auto-refresh (in seconds). Usually '60'",
+
+  "teamspeak6": {
+    "base_url": "${BASE_URL}",
+    "_comment_base_url": "The WebQuery HTTP endpoint of your TeamSpeak 6 server. Usually http://192.168.178.2:10080.",
+
+    "api_key": "${API_KEY}",
+    "_comment_api_key": "Your TeamSpeak 6 ServerQuery API key. It is shown ONCE in the server logs on first startup. If lost, you have to create a whole new server.",
+
+    "server_id": "${SERVER_ID}",
+    "_comment_server_id": "The ID of the virtual server you want to display. Default is usually '1'."
+  }
+}

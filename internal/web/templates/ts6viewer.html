@@ -1,0 +1,70 @@
+{{define "channel"}}
+<div class="row
+    {{if eq .Type 0}}channel{{else}}spacer{{end}}
+    {{if .FullWidth}} full-width spacer-mono{{end}}
+    {{if eq .Align 0}} spacer-left
+    {{else if eq .Align 1}} spacer-center
+    {{else}} spacer-right{{end}}"
+    {{if .FullWidth}}data-pattern="{{.Name}}"{{end}}>
+{{- .Name -}}
+</div>
+
+{{if .Clients}}
+<div class="children">
+    {{range .Clients}}
+        <div class="row client">
+            <span class="status-dot"></span>{{.Nickname}}
+        </div>
+    {{end}}
+</div>
+{{end}}
+
+{{if .Children}}
+<div class="children">
+    {{range .Children}}
+        {{template "channel" .}}
+    {{end}}
+</div>
+{{end}}
+{{end}}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>TS6 Viewer</title>
+
+<link rel="stylesheet" href="/static/{{.Theme}}.css">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+</head>
+
+<body>
+
+<button id="refreshButton">
+    🔄 <span id="refreshButtonText">{{.RefreshInterval}}</span>
+</button>
+
+<h1 id="server-name">{{.Server.Name}}</h1>
+
+<div class="server-info">
+    <div><span>User: </span> {{.Server.ClientsOnline}} / {{.Server.MaxClients}}</div>
+    <div><span>Client Connections:</span> {{.Server.ClientConnections}}</div>
+    <div><span>Uptime:</span> {{.Server.UptimePretty}}</div>
+    <div><span>ChannelsOnline:</span> {{.Server.ChannelsOnline}}</div>
+    <div><span>HostBannerURL:</span> <a href="{{.Server.HostBannerURL}}">{{.Server.HostBannerURL}}</a></div>
+</div>
+
+<div id="channels">
+    {{range .ChannelTree}}
+        {{template "channel" .}}
+    {{end}}
+</div>
+
+<script>
+let refreshTime = Number("{{.RefreshInterval}}") || 60;
+</script>
+<script src="/static/ts6viewer.js"></script>
+
+</body>
+</html>

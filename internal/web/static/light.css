@@ -1,0 +1,110 @@
+body {
+    font-family: 'Roboto', sans-serif;
+    background: #ffffff;
+    color: #000000;
+    padding: 0;
+    margin: 0;
+    font-size: 13px;
+}
+
+h1, h2 {
+    margin: 6px 0;
+    padding-left: 6px;
+    font-size: 15px;
+    font-weight: bold;
+    color: #222;
+}
+
+#refreshButton {
+    cursor: default!important;
+    position: fixed;
+    top: 8px;
+    right: 8px;
+    background: #eee;
+    border: 1px solid #ccc;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: bold;
+    z-index: 999;
+}
+
+#refreshButtonText {
+    font-weight: bold;
+}
+
+.row {
+    white-space: pre;
+    line-height: 16px;
+    font-size: 13px;
+    padding-left: 6px;
+}
+
+.row.spacer {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+.row.spacer.full-width {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+.row.client {
+    white-space: normal;
+}
+
+.channel {
+    color: #000;
+    padding-left: 10px;
+}
+
+.spacer {
+    color: #777;
+    white-space: pre;
+    font-weight: bold;
+    font-family: 'Roboto', sans-serif;
+    line-height: 16px;
+}
+
+.spacer-mono {
+    font-family: "Courier New", monospace;
+}
+
+.spacer-left { text-align: left; }
+.spacer-center { text-align: center; }
+.spacer-right { text-align: right; }
+
+.children {
+    margin-left: 10px;
+}
+
+.server-info {
+    margin: 6px;
+    padding: 6px;
+    border: 1px solid #ccc;
+    background: #fafafa;
+    font-size: 12px;
+}
+
+.server-info span {
+    display: inline-block;
+    width: 150px;
+    color: #444;
+}
+
+.client {
+    padding-left: 10px;
+    color: #000;
+}
+
+.status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background-color: #4CAF50;
+    border-radius: 50%;
+    margin-right: 6px;
+    position: relative;
+    top: -1px;
+}
