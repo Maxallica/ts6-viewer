@@ -1,21 +1,44 @@
 // ==========================================
-// Refresh countdown (also controls data polling)
+// Refresh countdown with LOCALSTORAGE persistence
 // ==========================================
-let counter = refreshTime;
+
+// Load counter from localStorage
+let counter = Number(localStorage.getItem("refreshCounter"));
+
+// If no valid value exists, reset to refreshTime
+if (!counter || counter > refreshTime || counter < 0) {
+    counter = refreshTime;
+}
 
 const refreshText = document.getElementById("refreshButtonText");
 
-// Update countdown every second
+// Immediately update UI with stored value
+refreshText.textContent = counter;
+
+// Save initial value (in case it was missing)
+localStorage.setItem("refreshCounter", counter);
+
+// Countdown loop
 setInterval(() => {
     counter--;
     refreshText.textContent = counter;
 
+    // Save updated counter
+    localStorage.setItem("refreshCounter", counter);
+
     // When countdown reaches zero → refresh data
     if (counter <= 0) {
         counter = refreshTime;
+        refreshText.textContent = counter;
+        localStorage.setItem("refreshCounter", counter);
         fetchViewerData();
     }
 }, 1000);
+
+// Save counter when leaving the page
+window.addEventListener("beforeunload", () => {
+    localStorage.setItem("refreshCounter", counter);
+});
 
 
 // ==========================================
@@ -123,6 +146,7 @@ function updateServerInfo(server) {
     `;
 }
 
+
 // ==========================================
 // Render channel tree
 // ==========================================
@@ -131,7 +155,6 @@ function updateChannelTree(tree) {
     container.innerHTML = renderChannels(tree);
     requestAnimationFrame(updateAllSpacers);
 }
-
 
 function renderChannels(nodes) {
     let html = "";
@@ -187,6 +210,7 @@ function renderChannel(ch) {
 
     return html;
 }
+
 
 // ==========================================
 // Initial load

@@ -12,12 +12,13 @@ import (
 	"time"
 
 	"ts6-viewer/internal/config"
+	"ts6-viewer/internal/view"
 )
 
 var (
-	cacheData      ViewerData
+	cacheData      view.ViewerData
 	cacheTimestamp time.Time
-	cacheTTL       = 3 * time.Second
+	cacheTTL       = 5 * time.Second
 
 	lastRequestTime = make(map[string]time.Time)
 	rateLimitWindow = 1 * time.Second
@@ -26,10 +27,13 @@ var (
 )
 
 func NewRouter(cfg config.Config) http.Handler {
+	if ttl, err := time.ParseDuration(cfg.RefreshInterval + "s"); err == nil {
+		cacheTTL = ttl
+	}
+
 	baseURL := cfg.Teamspeak6.BaseURL
 	apiKey := cfg.Teamspeak6.ApiKey
 	serverID := cfg.Teamspeak6.ServerID
-	theme := cfg.Theme
 	refreshIntervalStr := cfg.RefreshInterval
 
 	refreshInterval, err := strconv.Atoi(refreshIntervalStr)
@@ -56,13 +60,13 @@ func NewRouter(cfg config.Config) http.Handler {
 	dataHandler := func(w http.ResponseWriter, r *http.Request) {
 		ip := getIP(r)
 
-		var raw ViewerData
+		var data view.ViewerData
 		var err error
 
 		if allowRequest(ip) {
-			raw, err = getViewerData(baseURL, apiKey, serverID)
+			data, err = getViewerData(&cfg, baseURL, apiKey, serverID)
 		} else {
-			raw = cacheData
+			data = cacheData
 		}
 
 		if err != nil {
@@ -70,11 +74,8 @@ func NewRouter(cfg config.Config) http.Handler {
 			return
 		}
 
-		raw.Theme = theme
-		raw.RefreshInterval = refreshIntervalStr
-
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(raw)
+		json.NewEncoder(w).Encode(data)
 	}
 
 	mux.HandleFunc("/ts6viewer/data", dataHandler)
@@ -86,11 +87,11 @@ func NewRouter(cfg config.Config) http.Handler {
 	viewHandler := func(w http.ResponseWriter, r *http.Request) {
 		ip := getIP(r)
 
-		var data ViewerData
+		var data view.ViewerData
 		var err error
 
 		if allowRequest(ip) {
-			data, err = getViewerData(baseURL, apiKey, serverID)
+			data, err = getViewerData(&cfg, baseURL, apiKey, serverID)
 		} else {
 			data = cacheData
 		}
@@ -100,12 +101,9 @@ func NewRouter(cfg config.Config) http.Handler {
 			return
 		}
 
-		data.Theme = theme
-		data.RefreshInterval = refreshIntervalStr
-
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		if err := tmpl.Execute(w, data); err != nil {
-			log.Println("template error:", err)
+			log.Println("Template error:", err)
 		}
 	}
 

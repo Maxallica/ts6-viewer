@@ -4,7 +4,11 @@ import (
 	"net"
 	"net/http"
 	"time"
+	"ts6-viewer/internal/config"
+	"ts6-viewer/internal/domain"
+	"ts6-viewer/internal/mapper"
 	"ts6-viewer/internal/ts6"
+	"ts6-viewer/internal/view"
 )
 
 func getIP(r *http.Request) string {
@@ -18,8 +22,8 @@ func getIP(r *http.Request) string {
 func allowRequest(ip string) bool {
 	mu.Lock()
 	defer mu.Unlock()
-
 	last, exists := lastRequestTime[ip]
+
 	if exists && time.Since(last) < rateLimitWindow {
 		return false
 	}
@@ -28,7 +32,7 @@ func allowRequest(ip string) bool {
 	return true
 }
 
-func getViewerData(baseURL, apiKey string, serverID string) (ViewerData, error) {
+func getViewerData(cfg *config.Config, baseURL, apiKey, serverID string) (view.ViewerData, error) {
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -38,71 +42,62 @@ func getViewerData(baseURL, apiKey string, serverID string) (ViewerData, error) 
 
 	serverInfo, err := ts6.GetServerInfo(baseURL, apiKey, serverID)
 	if err != nil {
-		return ViewerData{}, err
+		return view.ViewerData{}, err
 	}
 
-	clients, err := ts6.GetClientList(baseURL, apiKey, serverID)
+	apiClients, err := ts6.GetClientList(baseURL, apiKey, serverID)
 	if err != nil {
-		return ViewerData{}, err
+		return view.ViewerData{}, err
 	}
 
-	channelTree, err := ts6.GetChannelTree(baseURL, apiKey, serverID, clients)
+	apiChannels, err := ts6.GetChannelList(baseURL, apiKey, serverID)
 	if err != nil {
-		return ViewerData{}, err
+		return view.ViewerData{}, err
 	}
 
-	view := ViewerData{
-		Server:      mapServer(serverInfo),
-		ChannelTree: mapChannelTree(channelTree),
+	// API → Domain
+	domainChannels := make([]*domain.Channel, 0, len(apiChannels))
+	for _, ch := range apiChannels {
+		domainChannels = append(domainChannels, mapper.MapAPIChannel(ch))
 	}
 
-	cacheData = view
+	fullClients := make([]*domain.FullClient, 0, len(apiClients))
+	for _, c := range apiClients {
+		// info, err := ts6.GetClientInfo(baseURL, apiKey, serverID, c.CLID)
+		// if err != nil {
+		// 	fmt.Println("clientinfo error:", err)
+		// }
+
+		domainInfo := &domain.ClientInfo{
+			MicMuted:    false,
+			OutputMuted: false,
+			IsTalking:   false,
+		}
+
+		domainClient := mapper.MapAPIClient(c)
+		// domainInfo := mapper.MapAPIClientInfo(info)
+
+		fullClients = append(fullClients, &domain.FullClient{
+			Client: *domainClient,
+			Info:   domainInfo,
+		})
+	}
+
+	channelTree := domain.BuildChannelTree(domainChannels, fullClients)
+
+	// ServerInfo → Domain
+	domainServer := mapper.MapAPIServer(serverInfo)
+
+	// Domain → View
+	viewData := view.ViewerData{
+		Server:          mapper.MapServerToView(domainServer),
+		ChannelTree:     mapper.MapChannelTreeToView(channelTree),
+		Theme:           cfg.Theme,
+		RefreshInterval: cfg.RefreshInterval,
+	}
+
+	// Set cache
+	cacheData = viewData
 	cacheTimestamp = time.Now()
-
-	return view, nil
-}
-
-func mapServer(s *ts6.ServerInfo) *ServerView {
-	return &ServerView{
-		Name:              s.Name,
-		ClientsOnline:     s.ClientsOnline,
-		MaxClients:        s.MaxClients,
-		UptimePretty:      s.UptimePretty,
-		ChannelsOnline:    s.ChannelsOnline,
-		HostBannerURL:     s.HostBannerURL,
-		ClientConnections: s.ClientConnections,
-	}
-}
-
-func mapClient(c *ts6.Client) *ClientView {
-	return &ClientView{
-		Nickname: c.Nickname,
-	}
-}
-
-func mapChannel(ch *ts6.Channel) *ChannelView {
-	out := &ChannelView{
-		Name:   ch.Name,
-		Type:   ch.Type,
-		Align:  ch.Align,
-		Repeat: ch.Repeat,
-	}
-
-	for _, c := range ch.Clients {
-		out.Clients = append(out.Clients, mapClient(c))
-	}
-
-	for _, child := range ch.Children {
-		out.Children = append(out.Children, mapChannel(child))
-	}
-
-	return out
-}
-
-func mapChannelTree(tree []*ts6.Channel) []*ChannelView {
-	out := make([]*ChannelView, 0, len(tree))
-	for _, ch := range tree {
-		out = append(out, mapChannel(ch))
-	}
-	return out
+	return viewData, nil
 }

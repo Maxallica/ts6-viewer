@@ -1,6 +1,8 @@
-package http
+package view
 
-import "ts6-viewer/internal/ts6"
+import (
+	"ts6-viewer/internal/domain"
+)
 
 type ViewerData struct {
 	Server          *ServerView
@@ -20,13 +22,18 @@ type ServerView struct {
 }
 
 type ClientView struct {
-	Nickname string
+	Nickname    string
+	Platform    string
+	Version     string
+	MicMuted    bool
+	OutputMuted bool
+	IsTalking   bool
 }
 
 type ChannelView struct {
 	Name     string
-	Type     ts6.ChannelType
-	Align    ts6.Aligned
+	Type     domain.ChannelType
+	Align    domain.Aligned
 	Repeat   bool
 	Clients  []*ClientView
 	Children []*ChannelView

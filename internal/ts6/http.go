@@ -9,11 +9,7 @@ import (
 
 // doGET performs an authenticated HTTP GET request against TS6
 func doGET(baseURL, apiKey, path string, out any) error {
-	req, err := http.NewRequest(
-		http.MethodGet,
-		baseURL+path,
-		nil,
-	)
+	req, err := http.NewRequest(http.MethodGet, baseURL+path, nil)
 	if err != nil {
 		return err
 	}

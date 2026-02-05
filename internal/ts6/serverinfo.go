@@ -18,8 +18,6 @@ type ServerInfo struct {
 	NeededIdentitySecurity string `json:"virtualserver_needed_identity_security_level"`
 	QueryClientConnections string `json:"virtualserver_query_client_connections"`
 	ClientConnections      string `json:"virtualserver_client_connections"`
-
-	UptimePretty string `json:"-"`
 }
 
 // ServerInfoResponse represents the TS6 API response
@@ -67,24 +65,5 @@ func GetServerInfo(baseURL, apiKey string, serverID string) (*ServerInfo, error)
 		info.ClientsOnline = strconv.Itoa(n)
 	}
 
-	modifiedInfo := &info
-	modifiedInfo.UptimePretty = formatUptime(modifiedInfo.Uptime)
-
-	return modifiedInfo, nil
-}
-
-func formatUptime(secondsStr string) string {
-	sec, err := strconv.Atoi(secondsStr)
-	if err != nil || sec < 0 {
-		return secondsStr
-	}
-
-	days := sec / 86400
-	sec %= 86400
-	hours := sec / 3600
-	sec %= 3600
-	minutes := sec / 60
-	seconds := sec % 60
-
-	return fmt.Sprintf("%dD %02d:%02d:%02d", days, hours, minutes, seconds)
+	return &info, nil
 }

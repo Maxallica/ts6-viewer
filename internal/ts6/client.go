@@ -1,6 +1,9 @@
 package ts6
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 // Client represents an online TeamSpeak client
 type Client struct {
@@ -19,17 +22,21 @@ type ClientListResponse struct {
 
 // GetClientList returns all connected clients for a virtual server
 func GetClientList(baseURL, apiKey string, serverID string) ([]Client, error) {
-	var resp ClientListResponse
+	var raw map[string]any
 
 	err := doGET(
 		baseURL,
 		apiKey,
 		fmt.Sprintf("/%s/clientlist", serverID),
-		&resp,
+		&raw,
 	)
 	if err != nil {
 		return nil, err
 	}
+
+	var resp ClientListResponse
+	b, _ := json.Marshal(raw)
+	json.Unmarshal(b, &resp)
 
 	if resp.Status.Code != 0 {
 		return nil, fmt.Errorf(
