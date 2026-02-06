@@ -1,9 +1,9 @@
 // ==========================================
-// Refresh countdown with LOCALSTORAGE persistence
+// Refresh countdown with SESSIONSTORAGE persistence
 // ==========================================
 
-// Load counter from localStorage
-let counter = Number(localStorage.getItem("refreshCounter"));
+// Load counter from sessionStorage
+let counter = Number(sessionStorage.getItem("refreshCounter"));
 
 // If no valid value exists, reset to refreshTime
 if (!counter || counter > refreshTime || counter < 0) {
@@ -16,7 +16,7 @@ const refreshText = document.getElementById("refreshButtonText");
 refreshText.textContent = counter;
 
 // Save initial value (in case it was missing)
-localStorage.setItem("refreshCounter", counter);
+sessionStorage.setItem("refreshCounter", counter);
 
 // Countdown loop
 setInterval(() => {
@@ -24,22 +24,21 @@ setInterval(() => {
     refreshText.textContent = counter;
 
     // Save updated counter
-    localStorage.setItem("refreshCounter", counter);
+    sessionStorage.setItem("refreshCounter", counter);
 
     // When countdown reaches zero → refresh data
     if (counter <= 0) {
         counter = refreshTime;
         refreshText.textContent = counter;
-        localStorage.setItem("refreshCounter", counter);
+        sessionStorage.setItem("refreshCounter", counter);
         fetchViewerData();
     }
 }, 1000);
 
 // Save counter when leaving the page
 window.addEventListener("beforeunload", () => {
-    localStorage.setItem("refreshCounter", counter);
+    sessionStorage.setItem("refreshCounter", counter);
 });
-
 
 // ==========================================
 // Spacer rendering helpers
