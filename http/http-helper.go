@@ -1,13 +1,15 @@
 package http
 
 import (
+	"fmt"
 	"net"
 	"net/http"
 	"time"
 	"ts6-viewer/internal/config"
 	"ts6-viewer/internal/domain"
 	"ts6-viewer/internal/mapper"
-	"ts6-viewer/internal/ts6"
+	"ts6-viewer/internal/ts6/serverquery"
+	"ts6-viewer/internal/ts6/webquery"
 	"ts6-viewer/internal/view"
 )
 
@@ -40,53 +42,122 @@ func getViewerData(cfg *config.Config, baseURL, apiKey, serverID string) (view.V
 		return cacheData, nil
 	}
 
-	serverInfo, err := ts6.GetServerInfo(baseURL, apiKey, serverID)
-	if err != nil {
-		return view.ViewerData{}, err
-	}
+	var domainServer *domain.Server
+	var domainChannels []*domain.Channel
+	var fullClients []*domain.FullClient
 
-	apiClients, err := ts6.GetClientList(baseURL, apiKey, serverID)
-	if err != nil {
-		return view.ViewerData{}, err
-	}
-
-	apiChannels, err := ts6.GetChannelList(baseURL, apiKey, serverID)
-	if err != nil {
-		return view.ViewerData{}, err
-	}
-
-	// API → Domain
-	domainChannels := make([]*domain.Channel, 0, len(apiChannels))
-	for _, ch := range apiChannels {
-		domainChannels = append(domainChannels, mapper.MapAPIChannel(ch))
-	}
-
-	fullClients := make([]*domain.FullClient, 0, len(apiClients))
-	for _, c := range apiClients {
-		// info, err := ts6.GetClientInfo(baseURL, apiKey, serverID, c.CLID)
-		// if err != nil {
-		// 	fmt.Println("clientinfo error:", err)
-		// }
-
-		domainInfo := &domain.ClientInfo{
-			MicMuted:    false,
-			OutputMuted: false,
-			IsTalking:   false,
+	switch cfg.Teamspeak6.Mode {
+	case "webquery":
+		// Channels
+		webChannels, err := webquery.GetChannelList(baseURL, apiKey, serverID)
+		if err != nil {
+			return view.ViewerData{}, err
 		}
 
-		domainClient := mapper.MapAPIClient(c)
-		// domainInfo := mapper.MapAPIClientInfo(info)
+		domainChannels = make([]*domain.Channel, 0, len(webChannels))
+		for _, ch := range webChannels {
+			domainChannels = append(domainChannels, mapper.MapChannelByWebQuery(ch))
+		}
 
-		fullClients = append(fullClients, &domain.FullClient{
-			Client: *domainClient,
-			Info:   domainInfo,
-		})
+		// Clients
+		webClients, err := webquery.GetClientList(baseURL, apiKey, serverID)
+		if err != nil {
+			return view.ViewerData{}, err
+		}
+
+		fullClients = make([]*domain.FullClient, 0, len(webClients))
+		for _, c := range webClients {
+			// info, err := ts6.GetClientInfo(baseURL, apiKey, serverID, c.CLID)
+			// if err != nil {
+			// 	fmt.Println("clientinfo error:", err)
+			// }
+
+			domainInfo := &domain.ClientInfo{
+				MicMuted:    false,
+				OutputMuted: false,
+				IsTalking:   false,
+			}
+
+			domainClient := mapper.MapClientByWebQuery(c)
+			// domainInfo := mapper.MapAPIClientInfo(info)
+
+			fullClients = append(fullClients, &domain.FullClient{
+				Client: *domainClient,
+				Info:   domainInfo,
+			})
+		}
+
+		// ServerInfo
+		webServerInfo, err := webquery.GetServerInfo(baseURL, apiKey, serverID)
+		if err != nil {
+			return view.ViewerData{}, err
+		}
+		domainServer = mapper.MapServerByWebQuery(webServerInfo, &webClients)
+
+	case "serverquery":
+		sshClient, err := serverquery.NewSSHClient(cfg)
+		if err != nil {
+			return view.ViewerData{}, err
+		}
+
+		err = sshClient.Use(cfg.Teamspeak6.ServerID)
+		if err != nil {
+			return view.ViewerData{}, err
+		}
+
+		// Channels
+		serverChannels, err := serverquery.GetChannelList(cfg, sshClient)
+		if err != nil {
+			return view.ViewerData{}, err
+		}
+
+		domainChannels = make([]*domain.Channel, 0, len(serverChannels))
+		for _, ch := range serverChannels {
+			domainChannels = append(domainChannels, mapper.MapChannelByServerQuery(ch))
+		}
+
+		// Clients
+		serverClients, err := serverquery.GetClientList(sshClient, cfg.Teamspeak6.ServerID)
+		if err != nil {
+			return view.ViewerData{}, err
+		}
+
+		fullClients = make([]*domain.FullClient, 0, len(serverClients))
+		for _, c := range serverClients {
+			// info, err := ts6.GetClientInfo(baseURL, apiKey, serverID, c.CLID)
+			// if err != nil {
+			// 	fmt.Println("clientinfo error:", err)
+			// }
+
+			domainInfo := &domain.ClientInfo{
+				MicMuted:    false,
+				OutputMuted: false,
+				IsTalking:   false,
+			}
+
+			domainClient := mapper.MapClientByServerQuery(c)
+			// domainInfo := mapper.MapAPIClientInfo(info)
+
+			fullClients = append(fullClients, &domain.FullClient{
+				Client: *domainClient,
+				Info:   domainInfo,
+			})
+		}
+
+		// ServerInfo
+		sshServerInfo, err := serverquery.GetServerInfo(cfg, sshClient)
+		if err != nil {
+			return view.ViewerData{}, err
+		}
+
+		domainServer = mapper.MapServerByServerQuery(sshServerInfo, &serverClients)
+
+		sshClient.Close()
+	default:
+		return view.ViewerData{}, fmt.Errorf("unsupported mode: %s", cfg.Teamspeak6.Mode)
 	}
 
 	channelTree := domain.BuildChannelTree(domainChannels, fullClients)
-
-	// ServerInfo → Domain
-	domainServer := mapper.MapAPIServer(serverInfo)
 
 	// Domain → View
 	viewData := view.ViewerData{

@@ -1,4 +1,4 @@
-package ts6
+package webquery
 
 // Status represents the standard TS6 API status block
 type Status struct {

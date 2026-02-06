@@ -1,4 +1,4 @@
-package ts6
+package webquery
 
 import (
 	"encoding/json"

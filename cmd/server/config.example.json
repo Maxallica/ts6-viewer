@@ -13,10 +13,25 @@
 
   "teamspeak6": {
     "base_url": "${BASE_URL}",
-    "_comment_base_url": "The WebQuery HTTP endpoint of your TeamSpeak 6 server. Usually http://192.168.178.2:10080.",
+    "_comment_base_url": "The WebQuery HTTP or endpoint of your TeamSpeak 6 server. Usually http://192.168.178.2:10080.",
 
     "api_key": "${API_KEY}",
-    "_comment_api_key": "Your TeamSpeak 6 ServerQuery API key. It is shown ONCE in the server logs on first startup. If lost, you have to create a whole new server.",
+    "_comment_api_key": "Your TeamSpeak 6 API key. It is shown ONCE in the server logs on first startup. If lost, create a new one.",
+
+    "host": "${HOST}",
+    "_comment_host": "The ServerQuery host. Usually the IP address of your TeamSpeak 6 server or 'localhost' if TS6 Viewer runs on the same machine.",
+
+    "port": "${PORT}",
+    "_comment_port": "The ServerQuery port. Usually 10022 for SSH or 10011 for Telnet.",
+
+    "user": "${USER}",
+    "_comment_user": "The ServerQuery user. Usually 'serveradmin' by default.",
+
+    "password": "${PASSWORD}",
+    "_comment_password": "The ServerQuery password. It is shown ONCE in the server logs on first startup. If lost, create a new one or reset it via the TeamSpeak 6 server console.",
+
+    "mode": "${MODE}",
+    "_comment_mode": "Either choose 'webquery' or 'serverquery' (serverquery [ssh] is fully featured without flooding)",
 
     "server_id": "${SERVER_ID}",
     "_comment_server_id": "The ID of the virtual server you want to display. Default is usually '1'."

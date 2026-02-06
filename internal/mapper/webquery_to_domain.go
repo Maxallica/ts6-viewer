@@ -1,16 +1,17 @@
 package mapper
 
 import (
+	"strconv"
 	"ts6-viewer/internal/domain"
-	"ts6-viewer/internal/ts6"
+	"ts6-viewer/internal/ts6/webquery"
 )
 
-func MapAPIServer(server *ts6.ServerInfo) *domain.Server {
+func MapServerByWebQuery(server *webquery.ServerInfo, clients *[]webquery.Client) *domain.Server {
 	uptimePretty := domain.MakeUptimePretty(server.Uptime)
 
 	return &domain.Server{
 		Name:              server.Name,
-		ClientsOnline:     server.ClientsOnline,
+		ClientsOnline:     strconv.Itoa(len(*clients)),
 		MaxClients:        server.MaxClients,
 		UptimePretty:      uptimePretty,
 		ChannelsOnline:    server.ChannelsOnline,
@@ -19,7 +20,7 @@ func MapAPIServer(server *ts6.ServerInfo) *domain.Server {
 	}
 }
 
-func MapAPIChannel(api ts6.Channel) *domain.Channel {
+func MapChannelByWebQuery(api webquery.Channel) *domain.Channel {
 	chType, align, repeat, cleanName := domain.ParseChannelName(api.Name)
 
 	return &domain.Channel{
@@ -33,7 +34,7 @@ func MapAPIChannel(api ts6.Channel) *domain.Channel {
 	}
 }
 
-func MapAPIClient(c ts6.Client) *domain.Client {
+func MapClientByWebQuery(c webquery.Client) *domain.Client {
 	return &domain.Client{
 		ID:        c.CLID,
 		Nickname:  c.Nickname,
@@ -41,7 +42,7 @@ func MapAPIClient(c ts6.Client) *domain.Client {
 	}
 }
 
-func MapAPIClientInfo(info *ts6.ClientInfo) *domain.ClientInfo {
+func MapClientInfoByWebQuery(info *webquery.ClientInfo) *domain.ClientInfo {
 	if info == nil {
 		return &domain.ClientInfo{
 			MicMuted:    false,

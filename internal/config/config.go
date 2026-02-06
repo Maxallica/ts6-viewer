@@ -12,6 +12,11 @@ type Config struct {
 	Teamspeak6 struct {
 		BaseURL  string `json:"base_url"`
 		ApiKey   string `json:"api_key"`
+		Host     string `json:"host"`
+		Port     string `json:"port"`
+		User     string `json:"user"`
+		Password string `json:"password"`
+		Mode     string `json:"mode"`
 		ServerID string `json:"server_id"`
 	} `json:"teamspeak6"`
 
