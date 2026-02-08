@@ -22,7 +22,6 @@ type ServerInfo struct {
 }
 
 func GetServerInfo(cfg *config.Config, c *SSHClient) (*ServerInfo, error) {
-	// Select the virtual server
 	if err := c.Use(cfg.Teamspeak6.ServerID); err != nil {
 		return nil, err
 	}
@@ -32,15 +31,26 @@ func GetServerInfo(cfg *config.Config, c *SSHClient) (*ServerInfo, error) {
 		return nil, fmt.Errorf("failed to execute serverinfo: %w", err)
 	}
 
-	fields := strings.Fields(raw)
+	lines := strings.Split(raw, "\n")
+	if len(lines) == 0 {
+		return nil, fmt.Errorf("empty serverinfo response")
+	}
+
+	data := strings.TrimSpace(lines[0])
+	parts := strings.Split(data, " ")
+
 	info := &ServerInfo{}
 
-	for _, f := range fields {
-		if !strings.Contains(f, "=") {
+	for _, p := range parts {
+		if !strings.Contains(p, "=") {
 			continue
 		}
 
-		kv := strings.SplitN(f, "=", 2)
+		kv := strings.SplitN(p, "=", 2)
+		if len(kv) != 2 {
+			continue
+		}
+
 		key := kv[0]
 		val := UnescapeTS6(kv[1])
 
@@ -70,7 +80,6 @@ func GetServerInfo(cfg *config.Config, c *SSHClient) (*ServerInfo, error) {
 		}
 	}
 
-	// Adjust client count (TS counts query client)
 	if n, err := strconv.Atoi(info.ClientsOnline); err == nil {
 		n--
 		if n < 0 {
