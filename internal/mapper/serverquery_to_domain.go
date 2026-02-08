@@ -45,3 +45,19 @@ func MapClientByServerQuery(c serverquery.Client) *domain.Client {
 		ChannelID: c.CID,
 	}
 }
+
+func MapClientInfoByServerQuery(info *serverquery.ClientInfo) *domain.ClientInfo {
+	if info == nil {
+		return &domain.ClientInfo{
+			MicMuted:    false,
+			OutputMuted: false,
+			IsTalking:   false,
+		}
+	}
+
+	return &domain.ClientInfo{
+		MicMuted:    info.InputMuted == "1",
+		OutputMuted: info.OutputMuted == "1",
+		IsTalking:   info.IsTalker == "1",
+	}
+}

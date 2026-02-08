@@ -52,7 +52,7 @@ func MapClientInfoByWebQuery(info *webquery.ClientInfo) *domain.ClientInfo {
 	}
 
 	return &domain.ClientInfo{
-		MicMuted:    info.InputMuted == "1" || info.InputHardware == "1",
+		MicMuted:    info.InputMuted == "1",
 		OutputMuted: info.OutputMuted == "1",
 		IsTalking:   info.IsTalker == "1",
 	}

@@ -19,6 +19,7 @@ export PORT="${PORT:-10022}"
 export USER="${USER:-serveradmin}"
 export PASSWORD="${PASSWORD:-}"
 export MODE="${MODE:-webquery}"
+export ENABLE_DETAILED_CLIENT_INFO="${ENABLE_DETAILED_CLIENT_INFO:-true}"
 export SERVER_ID="${SERVER_ID:-1}"
 
 echo "[entrypoint] starting TS6 Viewer"

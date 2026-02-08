@@ -14,13 +14,8 @@ type Client struct {
 }
 
 // GetClientList returns all connected clients for a virtual server (SSH)
-func GetClientList(c *SSHClient, serverID string) ([]Client, error) {
-	// Select the virtual server
-	if err := c.Use(serverID); err != nil {
-		return nil, err
-	}
-
-	raw, err := c.exec("clientlist -uid -away -voice -groups -info")
+func GetClientList(shh *SSHClient) ([]Client, error) {
+	raw, err := shh.exec("clientlist -uid -away -voice -groups -info")
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute clientlist: %w", err)
 	}

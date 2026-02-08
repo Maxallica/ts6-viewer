@@ -22,7 +22,7 @@
     "_comment_host": "The ServerQuery host. Usually the IP address of your TeamSpeak 6 server or 'localhost' if TS6 Viewer runs on the same machine.",
 
     "port": "${PORT}",
-    "_comment_port": "The ServerQuery port. Usually 10022 for SSH or 10011 for Telnet.",
+    "_comment_port": "The ServerQuery port. Usually 10022 for SSH.",
 
     "user": "${USER}",
     "_comment_user": "The ServerQuery user. Usually 'serveradmin' by default.",
@@ -31,7 +31,10 @@
     "_comment_password": "The ServerQuery password. It is shown ONCE in the server logs on first startup. If lost, create a new one or reset it via the TeamSpeak 6 server console.",
 
     "mode": "${MODE}",
-    "_comment_mode": "Either choose 'webquery' or 'serverquery' (serverquery [ssh] is fully featured without flooding)",
+    "_comment_mode": "Either choose between 'webquery' [rest api] (10011) or 'serverquery' [ssh] (10022)",
+
+    "enable_detailed_client_info": "${ENABLE_DETAILED_CLIENT_INFO}",
+    "_comment_enable_detailed_client_info": "Whether to fetch detailed client info (like mic mute status) for each client. This can increase load on the server, so set to 'false' if you experience performance issues.",
 
     "server_id": "${SERVER_ID}",
     "_comment_server_id": "The ID of the virtual server you want to display. Default is usually '1'."

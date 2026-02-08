@@ -12,16 +12,31 @@ type ClientInfo struct {
 	Nickname   string `json:"client_nickname"`
 	ClientType string `json:"client_type"`
 
+	// Voice / Mute
 	InputMuted      string `json:"client_input_muted"`
 	InputHardware   string `json:"client_input_hardware"`
 	OutputMuted     string `json:"client_output_muted"`
 	OutputOnlyMuted string `json:"client_outputonly_muted"`
 	IsTalker        string `json:"client_is_talker"`
+
+	// Extra fields you posted
+	IsRecording      string `json:"client_is_recording"`
+	IsCommander      string `json:"client_is_channel_commander"`
+	NicknamePhonetic string `json:"client_nickname_phonetic"`
+	TalkPower        string `json:"client_talk_power"`
+	UniqueID         string `json:"client_unique_identifier"`
+	Base64HashUID    string `json:"client_base64HashClientUID"`
+	ChannelGroupID   string `json:"client_channel_group_id"`
+	IdleTime         string `json:"client_idle_time"`
+
+	// Connection
+	ConnectedTime           string `json:"connection_connected_time"`
+	BandwidthSentLastMinute string `json:"connection_bandwidth_sent_last_minute_total"`
 }
 
 type ClientInfoResponse struct {
-	Body   ClientInfo `json:"body"`
-	Status Status     `json:"status"`
+	Body   []ClientInfo `json:"body"`
+	Status Status       `json:"status"`
 }
 
 func GetClientInfo(baseURL, apiKey, serverID, clid string) (*ClientInfo, error) {
@@ -49,5 +64,5 @@ func GetClientInfo(baseURL, apiKey, serverID, clid string) (*ClientInfo, error) 
 		)
 	}
 
-	return &resp.Body, nil
+	return &resp.Body[0], nil
 }

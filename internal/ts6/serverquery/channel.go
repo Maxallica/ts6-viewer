@@ -22,8 +22,8 @@ type Channel struct {
 }
 
 // GetChannelList retrieves all channels using ServerQuery (SSH)
-func GetChannelList(cfg *config.Config, c *SSHClient) ([]Channel, error) {
-	raw, err := c.exec("channellist -topic -flags -limits")
+func GetChannelList(cfg *config.Config, ssh *SSHClient) ([]Channel, error) {
+	raw, err := ssh.exec("channellist -topic -flags -limits")
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute channellist: %w", err)
 	}

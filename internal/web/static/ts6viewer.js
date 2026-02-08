@@ -188,13 +188,25 @@ function renderChannel(ch) {
     }
 
     html += '>' + ch.Name + '</div>';
-
+    
     if (ch.Clients && ch.Clients.length > 0) {
         html += '<div class="children">';
         for (const c of ch.Clients) {
-            html += '<div class="row client"><span class="status-dot"></span>' +
-                    c.Nickname +
+            let icon = '<i class="fa-solid fa-circle status-online"></i>';
+
+            if (c.OutputMuted) {
+                icon = '<i class="fa-solid fa-volume-xmark status-audio"></i>';
+            } else if (c.MicMuted) {
+                icon = '<i class="fa-solid fa-microphone-slash status-mic"></i>';
+            } else {
+                icon = '<i class="fa-solid fa-circle status-online"></i>';
+            }
+
+            html += '<div class="row client">' +
+                    icon +
+                    '<span class="client-name">' + c.Nickname + '</span>' +
                     '</div>';
+
         }
         html += '</div>';
     }
