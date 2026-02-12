@@ -2,23 +2,36 @@
   "_comment": "TS6 Viewer Configuration File",
   "_comment2": "Rename this file to config.json and adjust the values to your setup.",
 
-  "server_port": "${SERVER_PORT}",
-  "_comment_server_port": "The port on which the TS6 Viewer web interface will be available. Usually '8080'",
+  "server_port": "${SERVER_PORT}",  
+  "_comment_server_port": "The port on which the TS6 Viewer web interface will be available.",
 
-  "theme": "${THEME}",
-  "_comment_theme": "Choose between 'light' or 'dark' for the viewer theme. Usually 'dark'",
+  "theme": "${THEME}",  
+  "_comment_theme": "Choose between 'light' or 'dark' for the viewer theme.",
 
   "refresh_interval": "${REFRESH_INTERVAL}",
-  "_comment_refresh_interval": "How often the viewer should auto-refresh (in seconds). Usually '60'",
+  "_comment_refresh_interval": "How often the viewer should auto-refresh (in seconds).",
 
-  "teamspeak6": {
-    "base_url": "${BASE_URL}",
-    "_comment_base_url": "The WebQuery HTTP endpoint of your TeamSpeak 6 server. Usually http://192.168.178.2:10080.",
+  "host_connection_link": "${HOST_CONNECTION_LINK}",
+  "_comment_host_connection_link": "The URL or IP address of your TeamSpeak 6 server. This is used for display purposes and should match the actual server address.",
 
-    "api_key": "${API_KEY}",
-    "_comment_api_key": "Your TeamSpeak 6 ServerQuery API key. It is shown ONCE in the server logs on first startup. If lost, you have to create a whole new server.",
+  "teamspeak6": {    
+    "host": "${HOST}",
+    "_comment_host": "The ServerQuery [ssh] host. Usually the IP / domain of your TeamSpeak 6 server or 'localhost' if TS6 Viewer runs on the same machine.",
+
+    "port": "${PORT}",
+    "_comment_port": "The ServerQuery [ssh] port. Usually 10022 for SSH.",
+
+    "user": "${USER}",
+    "_comment_user": "The ServerQuery [ssh] user. Usually 'serveradmin' by default.",
+
+    "password": "${PASSWORD}",
+    "_comment_password": "The ServerQuery [ssh] password. It is shown ONCE in the server logs on first startup.",
+
+    "enable_voice_status": "${ENABLE_VOICE_STATUS}",
+    "_comment_enable_voice_status": "Fetch microphone and audio output status for each client (TS6 -voice).",
 
     "server_id": "${SERVER_ID}",
     "_comment_server_id": "The ID of the virtual server you want to display. Default is usually '1'."
   }
 }
+

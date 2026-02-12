@@ -1,103 +1,83 @@
 package http
 
 import (
-	"net"
+	"log"
 	"net/http"
 	"time"
 	"ts6-viewer/internal/config"
-	"ts6-viewer/internal/domain"
-	"ts6-viewer/internal/mapper"
 	"ts6-viewer/internal/ts6"
 	"ts6-viewer/internal/view"
 )
 
+// getIP extracts the IP address from the request.
 func getIP(r *http.Request) string {
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return r.RemoteAddr
+	ip := r.RemoteAddr
+	if ipForwarded := r.Header.Get("X-Forwarded-For"); ipForwarded != "" {
+		ip = ipForwarded
 	}
-	return host
+	return ip
 }
 
+// allowRequest checks rate limiting per IP.
 func allowRequest(ip string) bool {
 	mu.Lock()
 	defer mu.Unlock()
-	last, exists := lastRequestTime[ip]
 
-	if exists && time.Since(last) < rateLimitWindow {
+	now := time.Now()
+	last, ok := lastRequestTime[ip]
+	if ok && now.Sub(last) < rateLimitWindow {
 		return false
 	}
 
-	lastRequestTime[ip] = time.Now()
+	lastRequestTime[ip] = now
 	return true
 }
 
-func getViewerData(cfg *config.Config, baseURL, apiKey, serverID string) (view.ViewerData, error) {
+// getViewerData fetches or returns cached viewer data.
+func getViewerData(cfg *config.Config, force bool) (view.VMTS6Viewer, error) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	if time.Since(cacheTimestamp) < cacheTTL {
+	if !force && time.Since(cacheTimestamp) < cacheTTL {
+		log.Println("[HTTP] Returning cached viewer data")
 		return cacheData, nil
 	}
 
-	serverInfo, err := ts6.GetServerInfo(baseURL, apiKey, serverID)
+	log.Println("[HTTP] Fetching new viewer data from TS6 server")
+	sshClient, err := ts6.GetPersistentClient(cfg, cfg.Teamspeak6.ServerID)
 	if err != nil {
-		return view.ViewerData{}, err
+		log.Printf("[HTTP] Failed to get SSH client: %v\n", err)
+		return view.VMTS6Viewer{}, err
 	}
 
-	apiClients, err := ts6.GetClientList(baseURL, apiKey, serverID)
+	channels, err := ts6.GetChannelList(cfg, sshClient)
 	if err != nil {
-		return view.ViewerData{}, err
+		log.Printf("[HTTP] Failed to get channels: %v\n", err)
+		return view.VMTS6Viewer{}, err
 	}
 
-	apiChannels, err := ts6.GetChannelList(baseURL, apiKey, serverID)
+	clients, err := ts6.GetClientList(cfg, sshClient)
 	if err != nil {
-		return view.ViewerData{}, err
+		log.Printf("[HTTP] Failed to get clients: %v\n", err)
+		return view.VMTS6Viewer{}, err
 	}
 
-	// API → Domain
-	domainChannels := make([]*domain.Channel, 0, len(apiChannels))
-	for _, ch := range apiChannels {
-		domainChannels = append(domainChannels, mapper.MapAPIChannel(ch))
+	info, err := ts6.GetServerInfo(cfg, sshClient)
+	if err != nil {
+		log.Printf("[HTTP] Failed to get server info: %v\n", err)
+		return view.VMTS6Viewer{}, err
 	}
 
-	fullClients := make([]*domain.FullClient, 0, len(apiClients))
-	for _, c := range apiClients {
-		// info, err := ts6.GetClientInfo(baseURL, apiKey, serverID, c.CLID)
-		// if err != nil {
-		// 	fmt.Println("clientinfo error:", err)
-		// }
-
-		domainInfo := &domain.ClientInfo{
-			MicMuted:    false,
-			OutputMuted: false,
-			IsTalking:   false,
-		}
-
-		domainClient := mapper.MapAPIClient(c)
-		// domainInfo := mapper.MapAPIClientInfo(info)
-
-		fullClients = append(fullClients, &domain.FullClient{
-			Client: *domainClient,
-			Info:   domainInfo,
-		})
-	}
-
-	channelTree := domain.BuildChannelTree(domainChannels, fullClients)
-
-	// ServerInfo → Domain
-	domainServer := mapper.MapAPIServer(serverInfo)
-
-	// Domain → View
-	viewData := view.ViewerData{
-		Server:          mapper.MapServerToView(domainServer),
-		ChannelTree:     mapper.MapChannelTreeToView(channelTree),
+	vmTS6Viewer := view.VMTS6Viewer{
+		VMServer:        view.BuildVMServer(cfg, info, clients),
+		VMChannels:      view.BuildVMChannels(channels, clients),
 		Theme:           cfg.Theme,
 		RefreshInterval: cfg.RefreshInterval,
 	}
 
-	// Set cache
-	cacheData = viewData
+	cacheData = vmTS6Viewer
 	cacheTimestamp = time.Now()
-	return viewData, nil
+	log.Println("[HTTP] Viewer data updated and cached")
+
+	return vmTS6Viewer, nil
 }

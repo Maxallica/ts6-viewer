@@ -1,57 +1,136 @@
 package ts6
 
 import (
-	"encoding/json"
 	"fmt"
+	"strings"
+	"ts6-viewer/internal/config"
 )
 
-// Client represents an online TeamSpeak client
 type Client struct {
-	CID        string `json:"cid"`
-	CLID       string `json:"clid"`
-	DatabaseID string `json:"client_database_id"`
-	Nickname   string `json:"client_nickname"`
-	ClientType string `json:"client_type"`
+	CLID             string
+	CID              string
+	DatabaseID       string
+	Nickname         string
+	Type             string
+	UniqueIdentifier string
+
+	Away        string
+	AwayMessage string
+
+	InputMuted      string
+	OutputMuted     string
+	OutputOnlyMuted string
+	InputHardware   string
+	OutputHardware  string
+	TalkPower       string
+	IsTalking       string
+
+	ServerGroups   string
+	ChannelGroupID string
+
+	IdleTime       string
+	ConnectionTime string
+
+	Country string
+	IconID  string
+
+	Version  string
+	Platform string
 }
 
-// ClientListResponse represents the TS6 API response
-type ClientListResponse struct {
-	Body   []Client `json:"body"`
-	Status Status   `json:"status"`
-}
+func GetClientList(cfg *config.Config, ssh *SSHClient) ([]Client, error) {
 
-// GetClientList returns all connected clients for a virtual server
-func GetClientList(baseURL, apiKey string, serverID string) ([]Client, error) {
-	var raw map[string]any
+	voiceCmd := ""
+	if cfg.Teamspeak6.EnableVoiceStatus == "true" {
+		voiceCmd = "-voice"
+	}
 
-	err := doGET(
-		baseURL,
-		apiKey,
-		fmt.Sprintf("/%s/clientlist", serverID),
-		&raw,
-	)
+	raw, err := ssh.exec("clientlist -uid -away -groups -times -info -country -icon " + voiceCmd)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to execute clientlist: %w", err)
 	}
 
-	var resp ClientListResponse
-	b, _ := json.Marshal(raw)
-	json.Unmarshal(b, &resp)
+	parts := strings.Split(strings.TrimSpace(raw), "|")
+	clients := make([]Client, 0, len(parts))
 
-	if resp.Status.Code != 0 {
-		return nil, fmt.Errorf(
-			"ts6 error %d: %s",
-			resp.Status.Code,
-			resp.Status.Message,
-		)
-	}
+	for _, p := range parts {
 
-	filtered := make([]Client, 0, len(resp.Body))
-	for _, c := range resp.Body {
-		if c.DatabaseID != "1" {
-			filtered = append(filtered, c)
+		fields := strings.Fields(p)
+		cl := Client{}
+
+		for _, f := range fields {
+			if !strings.Contains(f, "=") {
+				continue
+			}
+
+			kv := strings.SplitN(f, "=", 2)
+			key := kv[0]
+			val := UnescapeTS6(kv[1])
+
+			switch key {
+
+			case "clid":
+				cl.CLID = val
+			case "cid":
+				cl.CID = val
+			case "client_database_id":
+				cl.DatabaseID = val
+			case "client_nickname":
+				cl.Nickname = val
+			case "client_type":
+				cl.Type = val
+			case "client_unique_identifier":
+				cl.UniqueIdentifier = val
+
+			case "client_away":
+				cl.Away = val
+			case "client_away_message":
+				cl.AwayMessage = val
+
+			case "client_input_muted":
+				cl.InputMuted = val
+			case "client_output_muted":
+				cl.OutputMuted = val
+			case "client_outputonly_muted":
+				cl.OutputOnlyMuted = val
+			case "client_input_hardware":
+				cl.InputHardware = val
+			case "client_output_hardware":
+				cl.OutputHardware = val
+			case "client_talk_power":
+				cl.TalkPower = val
+			case "client_is_talking":
+				cl.IsTalking = val
+
+			case "client_servergroups":
+				cl.ServerGroups = val
+			case "client_channel_group_id":
+				cl.ChannelGroupID = val
+
+			case "client_idle_time":
+				cl.IdleTime = val
+			case "client_connection_connected_time":
+				cl.ConnectionTime = val
+
+			case "client_country":
+				cl.Country = val
+			case "client_icon_id":
+				cl.IconID = val
+
+			case "client_version":
+				cl.Version = val
+			case "client_platform":
+				cl.Platform = val
+			}
 		}
+
+		// Query Clients rausfiltern
+		if cl.Type == "1" {
+			continue
+		}
+
+		clients = append(clients, cl)
 	}
 
-	return filtered, nil
+	return clients, nil
 }

@@ -63,14 +63,14 @@ h1, h2 {
     white-space: nowrap;
 }
 
-.banner-url {
+.banner-url, .host-connection-link {
     display: block;
     width: 100%;
     text-align: center;
     padding: 4px 0;
 }
 
-.banner-url a {
+.banner-url a, .host-connection-link a {
     display: inline-block;
     color: #6aa9ff;
     text-decoration: none;
@@ -106,15 +106,36 @@ h1, h2 {
     padding-left: 26px;
 }
 
-.status-dot {
-    position: absolute;
-    left: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 12px;
-    height: 12px;
-    background-color: #4CAF50;
-    border-radius: 50%;
+.status-online {
+    color: #4CAF50;
+    margin-right: 6px;
+    font-size: 12px;
+    padding-left: 1px;
+    padding-right: 0.5px;
+}
+
+.status-mic {
+    color: #777;
+    margin-right: 6px;
+    font-size: 12px;
+}
+
+.status-mic::before {
+    color: #d9534f;
+}
+
+.status-audio {
+    color: #777;
+    margin-right: 6px;
+    font-size: 12px;
+}
+
+.status-audio::before {
+    color: #d9534f;
+}
+
+.client-name {
+    vertical-align: middle;
 }
 
 .spacer {
@@ -132,9 +153,9 @@ h1, h2 {
     line-height: 16px;
 }
 
-.spacer-left   { text-align: left; }
+.spacer-left { text-align: left; }
 .spacer-center { text-align: center; }
-.spacer-right  { text-align: right; }
+.spacer-right { text-align: right; }
 
 .blank-spacer {
     height: 16px;
@@ -166,11 +187,6 @@ h1, h2 {
 }
 
 @media (max-width: 600px) {
-    .status-dot {
-        width: 12px;
-        height: 12px;
-    }
-
     .server-info {
         max-width: 90%;
         font-size: 16px;

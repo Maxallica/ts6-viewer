@@ -1,21 +1,22 @@
-# TS6 Viewer
+TS6 Viewer
 <p align="center">
   <img src="dark.png" alt="Dark Theme" width="45%">
   <img src="light.png" alt="Light Theme" width="45%">
 </p>
 
 A lightweight, fast, and modern web viewer for **TeamSpeak 6** servers.  
-TS6 Viewer connects to the TeamSpeak 6 WebQuery API, retrieves live server and channel data, and displays it in a clean, responsive web interface with optional dark/light themes.
+TS6 Viewer connects to **ServerQuery (SSH, Port 10022)** and displays live server, channel, and client information.
 
 The viewer is designed to be:
 
 - Simple to deploy  
 - Fast and lightweight  
 - Fully client‑side auto‑refreshing  
-- Compatible with any TS6 server exposing WebQuery  
+- Compatible with any TS6 server  
 - Customizable via a single `config.json` file  
 
 ---
+
 
 ## Features
 
@@ -25,102 +26,156 @@ The viewer is designed to be:
 - Channel tree rendering with clients  
 - Spacer and full‑width channel support  
 - Caching + rate‑limit protection  
-- Works on Windows, Linux, and Docker‑friendly environments  
+- Pure **ServerQuery (SSH)** backend  
+- Optional **voice status** (mute status, audio status, talking)  
 
 ---
 
-## Configuration
+# ServerQuery (SSH)
 
-The application uses a `config.json` file located in the same directory as the executable.
+TS6 Viewer communicates exclusively via ServerQuery over SSH.
 
-### Example `config.json`
+Advantages:
+- Persistent SSH connection
+- Very fast, even with many clients
+- clientlist -voice provides all audio/mute/talker info in a single call
+- No REST overhead
+- No per-client requests
+- No rate limits
 
-```json
-{
-  "_comment": "TS6 Viewer Configuration File",
-  "_comment2": "Rename this file to config.json and adjust the values to your setup.",
+---
 
-  "server_port": "8080",
-  "_comment_server_port": "The port on which the TS6 Viewer web interface will be available.",
+# Configuration Files in the Project
 
-  "theme": "dark",
-  "_comment_theme": "Choose between 'light' or 'dark' for the viewer theme.",
+The repository includes two important configuration templates:
 
-  "refresh_interval": 60,
-  "_comment_refresh_interval": "How often the viewer should auto-refresh (in seconds).",
+### `config.example.json`
+This file is included in the project and serves as the template for your actual configuration.  
+You can:
 
-  "teamspeak6": {
-    "base_url": "http://192.168.178.195:57007",
-    "_comment_base_url": "The WebQuery HTTP endpoint of your TeamSpeak 6 server. Usually http://<ip>:10080 or your mapped port.",
+- rename it manually to `config.json`, or  
+- let Docker generate `config.json` automatically using environment variables.
 
-    "api_key": "geheim",
-    "_comment_api_key": "Your TeamSpeak 6 ServerQuery API key. It is shown ONCE in the server logs on first startup. If lost, create a new one.",
+---
 
-    "server_id": 1,
-    "_comment_server_id": "The ID of the virtual server you want to display. Default is usually 1."
-  }
-}
+# Docker Support
+
+The repository includes:
+
+- Dockerfile.sh — multi‑stage build for Go + Alpine
+- entrypoint.sh — generates config.json dynamically using environment variables
+- docker-compose.yml — ready to run the viewer with one command
+
+This allows you to run TS6 Viewer fully containerized.
+
+---
+
+## Dockerfile.sh explained
+
+The Dockerfile uses two stages:
+
+### 1) Builder Stage
+- Based on golang:1.20-alpine
+- Copies the entire repository into /app
+- Ensures config.example.json exists
+- Normalizes go.mod to avoid Go version parsing issues
+- Builds a static Linux binary: cmd/server/ts6viewer
+
+### 2) Runtime Stage
+- Based on alpine:latest
+- Installs CA certificates + gettext (envsubst)
+- Copies the built binary and assets from the builder
+- Copies entrypoint.sh
+- Exposes port 8080
+- Starts the viewer via the entrypoint script
+
+---
+
+## entrypoint.sh explained
+
+The entrypoint script:
+
+1. Loads environment variables
+2. Applies defaults if variables are missing
+3. Uses envsubst to generate config.json from config.example.json
+4. Starts the TS6 Viewer binary
+
+Environment variables include:
+
+- SERVER_PORT
+- THEME
+- REFRESH_INTERVAL
+- HOST
+- PORT
+- USER
+- PASSWORD
+- ENABLE_VOICE_STATUS
+- SERVER_ID
+
+This makes the Docker container fully configurable without editing files.
+
+# docker-compose.yml
+
+A ready‑to‑use compose file is included in the project.  
+You can start the viewer with:
+
+```
+docker compose up -d
 ```
 
 ---
 
-## Building the Program
+# Building the Program
 
-The project is written in **Go**, so building is extremely simple.
+The project is written in Go.
 
-### Prerequisites
+### Build on Linux
 
-- Go 1.20 or newer  
-- Git (optional)
-
----
-
-## Build on Linux
-```bash
+```sh
 git clone https://github.com/Maxallica/ts6-viewer.git
 cd ts6viewer
-
 go build -o ts6viewer
 ```
 
-## Build Windows binary on Linux
-```bash
+### Build Windows binary on Linux
+```sh
 cd "*/ts6-viewer/cmd/server"
-
 GOOS=windows GOARCH=amd64 go build -o ts6viewer.exe
 ```
 
-## Running on Linux
-```bash
+### Running on Linux
+
+```sh
 ./ts6viewer
 ```
 
-## Build on Windows
-```bash
+### Build on Windows
+
+```sh
 git clone https://github.com/Maxallica/ts6-viewer.git
 cd ts6viewer
-
 go build -o ts6viewer.exe
 ```
 
-## Build Linux binary on Windows
-```bash
-cd "*/ts6-viewer/cmd/server"
+### Build Linux binary on Windows
 
+```sh
+cd "*/ts6-viewer/cmd/server"
 $env:GOOS="linux"
 $env:GOARCH="amd64"
 go build -o ts6viewer
 ```
 
-## Running on Windows
-```bash
+### Running on Windows
+```sh
 .\ts6viewer.exe
 ```
 
 ---
 
-## Navigate to the ts6viewer page
-http(s)\://\<ip\>:\<port\>/ts6viewer
+## Navigate to the TS6 Viewer page
+
+http(s)\/\/\<ip\>:\<port\>/ts6viewer
 
 ---
 

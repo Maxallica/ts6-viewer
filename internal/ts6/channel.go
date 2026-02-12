@@ -2,47 +2,108 @@ package ts6
 
 import (
 	"fmt"
+	"strings"
+	"ts6-viewer/internal/config"
 )
 
-// Channel represents a TeamSpeak channel
 type Channel struct {
-	CID               string `json:"cid"`
-	PID               string `json:"pid"`
-	ChannelOrder      string `json:"channel_order"`
-	Name              string `json:"channel_name"`
-	Topic             string `json:"channel_topic"`
-	FlagPermanent     string `json:"channel_flag_permanent"`
-	FlagSemiPermanent string `json:"channel_flag_semi_permanent"`
-	FlagDefault       string `json:"channel_flag_default"`
-	FlagPassword      string `json:"channel_flag_password"`
-	MaxClients        string `json:"channel_maxclients"`
-	MaxFamilyClients  string `json:"channel_maxfamilyclients"`
-	NeededTalkPower   string `json:"channel_needed_talk_power"`
+	CID                           string
+	PID                           string
+	ChannelOrder                  string
+	Name                          string
+	Topic                         string
+	FlagPermanent                 string
+	FlagSemiPermanent             string
+	FlagDefault                   string
+	FlagPassword                  string
+	FlagMaxClientsUnlimited       string
+	FlagMaxFamilyClientsUnlimited string
+	MaxClients                    string
+	MaxFamilyClients              string
+	NeededTalkPower               string
+	Codec                         string
+	CodecQuality                  string
+	TotalClients                  string
+	IconID                        string
+	SecondsEmpty                  string
 }
 
-// ChannelListResponse represents the TS6 API response
-type ChannelListResponse struct {
-	Body   []Channel `json:"body"`
-	Status Status    `json:"status"`
-}
+// GetChannelList retrieves all channels using ServerQuery (SSH)
+func GetChannelList(cfg *config.Config, ssh *SSHClient) ([]Channel, error) {
 
-// GetChannelList returns all channels for a virtual server
-func GetChannelList(baseURL, apiKey string, serverID string) ([]Channel, error) {
-	var resp ChannelListResponse
-
-	err := doGET(
-		baseURL,
-		apiKey,
-		fmt.Sprintf("/%s/channellist", serverID),
-		&resp,
-	)
+	raw, err := ssh.exec("channellist -topic -flags -limits -voice -icon -secondsempty")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to execute channellist: %w", err)
 	}
 
-	if resp.Status.Code != 0 {
-		return nil, fmt.Errorf("ts6 error %d: %s", resp.Status.Code, resp.Status.Message)
+	parts := strings.Split(strings.TrimSpace(raw), "|")
+	channels := make([]Channel, 0, len(parts))
+
+	for _, p := range parts {
+
+		fields := strings.Fields(p)
+		ch := Channel{}
+
+		for _, f := range fields {
+			if !strings.Contains(f, "=") {
+				continue
+			}
+
+			kv := strings.SplitN(f, "=", 2)
+			key := kv[0]
+			val := UnescapeTS6(kv[1])
+
+			switch key {
+
+			case "cid":
+				ch.CID = val
+			case "pid":
+				ch.PID = val
+			case "channel_order":
+				ch.ChannelOrder = val
+			case "channel_name":
+				ch.Name = val
+			case "channel_topic":
+				ch.Topic = val
+
+			case "channel_flag_permanent":
+				ch.FlagPermanent = val
+			case "channel_flag_semi_permanent":
+				ch.FlagSemiPermanent = val
+			case "channel_flag_default":
+				ch.FlagDefault = val
+			case "channel_flag_password":
+				ch.FlagPassword = val
+			case "channel_flag_maxclients_unlimited":
+				ch.FlagMaxClientsUnlimited = val
+			case "channel_flag_maxfamilyclients_unlimited":
+				ch.FlagMaxFamilyClientsUnlimited = val
+
+			case "channel_maxclients":
+				ch.MaxClients = val
+			case "channel_maxfamilyclients":
+				ch.MaxFamilyClients = val
+
+			case "channel_needed_talk_power":
+				ch.NeededTalkPower = val
+
+			case "channel_codec":
+				ch.Codec = val
+			case "channel_codec_quality":
+				ch.CodecQuality = val
+			case "total_clients":
+				ch.TotalClients = val
+
+			case "channel_icon_id":
+				ch.IconID = val
+
+			case "seconds_empty":
+				ch.SecondsEmpty = val
+			}
+		}
+
+		channels = append(channels, ch)
 	}
 
-	return resp.Body, nil
+	return channels, nil
 }

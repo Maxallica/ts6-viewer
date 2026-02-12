@@ -6,15 +6,19 @@ import (
 )
 
 type Config struct {
-	ServerPort string `json:"server_port"`
-	Theme      string `json:"theme"`
+	ServerPort         string `json:"server_port"`
+	HostConnectionLink string `json:"host_connection_link"`
 
 	Teamspeak6 struct {
-		BaseURL  string `json:"base_url"`
-		ApiKey   string `json:"api_key"`
-		ServerID string `json:"server_id"`
+		Host              string `json:"host"`
+		Port              string `json:"port"`
+		User              string `json:"user"`
+		Password          string `json:"password"`
+		EnableVoiceStatus string `json:"enable_voice_status"`
+		ServerID          string `json:"server_id"`
 	} `json:"teamspeak6"`
 
+	Theme           string `json:"theme"`
 	RefreshInterval string `json:"refresh_interval"`
 }
 

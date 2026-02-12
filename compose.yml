@@ -1,0 +1,23 @@
+version: "3.9"
+
+services:
+  ts6viewer:
+    image: ts6viewer:latest
+    container_name: ts6viewer
+    ports:
+      - "9000:8080"
+
+    environment:
+      SERVER_PORT: "8080"
+      THEME: "dark"
+      REFRESH_INTERVAL: "60"
+      HOST_CONNECTION_LINK: ""
+
+      HOST: "192.168.178.2"
+      PORT: "10022"
+      USER: "serveradmin"
+      PASSWORD: ""
+      ENABLE_VOICE_STATUS: "true"
+      SERVER_ID: "1"
+
+    restart: unless-stopped
