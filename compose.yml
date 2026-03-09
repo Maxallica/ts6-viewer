@@ -2,7 +2,10 @@ version: "3.9"
 
 services:
   ts6viewer:
-    image: ts6viewer:latest
+    # Use this if you built the image locally yourself
+    # image: ts6viewer:main
+    # Use this if you want to pull the image via Docker Hub
+    image: maxallica/ts6-viewer:latest
     container_name: ts6viewer
     ports:
       - "9000:8080"
