@@ -18,11 +18,6 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-// sshReadBufferSize is the size of the bufio.Reader buffer used for reading
-// ServerQuery responses. The default 4096 is too small for responses like
-// channellist or clientlist on servers with many channels/clients.
-const sshReadBufferSize = 65536
-
 // SSHClient represents a persistent SSH ServerQuery connection.
 type SSHClient struct {
 	cfg      *config.Config
@@ -33,9 +28,7 @@ type SSHClient struct {
 	stdin   io.WriteCloser
 	reader  *bufio.Reader
 
-	mu   sync.Mutex // protects command execution and reconnect
-	done chan struct{}
-	once sync.Once
+	mu sync.Mutex // protects command execution and reconnect
 }
 
 var (
@@ -200,8 +193,7 @@ func newSSHClientBase(cfg *config.Config) (*SSHClient, error) {
 		ssh:     client,
 		session: session,
 		stdin:   stdin,
-		reader:  bufio.NewReaderSize(stdout, sshReadBufferSize),
-		done:    make(chan struct{}),
+		reader:  bufio.NewReader(stdout),
 	}
 
 	log.Println("[SSH] Waiting for welcome message")
@@ -246,27 +238,19 @@ func newSSHClientBase(cfg *config.Config) (*SSHClient, error) {
 }
 
 // keepAlive sends periodic version commands to prevent idle timeout.
-// It stops when the client is closed via the done channel.
 func (c *SSHClient) keepAlive() {
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 
-	for {
-		select {
-		case <-c.done:
-			log.Println("[SSH] keepAlive stopped (connection closed)")
+	for range ticker.C {
+		if c.IsClosed() {
 			return
-		case <-ticker.C:
-			if c.IsClosed() {
-				return
-			}
-			log.Println("[SSH] Sending keepalive ping")
-			_, err := c.Exec("version")
-			if err != nil {
-				log.Printf("[SSH] Keepalive failed: %v. Attempting reconnect\n", err)
-				_ = c.reconnect()
-				return // stop this goroutine; reconnect spawns a new one
-			}
+		}
+		log.Println("[SSH] Sending keepalive ping")
+		_, err := c.Exec("version")
+		if err != nil {
+			log.Printf("[SSH] Keepalive failed: %v. Attempting reconnect\n", err)
+			_ = c.reconnect()
 		}
 	}
 }
@@ -281,18 +265,8 @@ func (c *SSHClient) Exec(cmd string) (string, error) {
 }
 
 // exec sends a raw command and reads the response.
-// It includes panic recovery to handle unexpected bufio errors gracefully
-// instead of crashing the process.
-func (c *SSHClient) exec(cmd string) (result string, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Printf("[SSH] Recovered from panic during exec(%q): %v\n", cmd, r)
-			err = fmt.Errorf("panic during command execution: %v", r)
-			result = ""
-		}
-	}()
-
-	_, err = c.stdin.Write([]byte(cmd + "\n"))
+func (c *SSHClient) exec(cmd string) (string, error) {
+	_, err := c.stdin.Write([]byte(cmd + "\n"))
 	if err != nil {
 		return "", err
 	}
@@ -301,9 +275,9 @@ func (c *SSHClient) exec(cmd string) (result string, err error) {
 	var last string
 
 	for {
-		line, readErr := c.reader.ReadString('\n')
-		if readErr != nil {
-			return "", readErr
+		line, err := c.reader.ReadString('\n')
+		if err != nil {
+			return "", err
 		}
 		line = strings.TrimSpace(line)
 		lines = append(lines, line)
@@ -424,8 +398,7 @@ func isConnectionError(err error) bool {
 	return strings.Contains(msg, "eof") ||
 		strings.Contains(msg, "broken pipe") ||
 		strings.Contains(msg, "connection reset") ||
-		strings.Contains(msg, "use of closed network connection") ||
-		strings.Contains(msg, "panic during command execution")
+		strings.Contains(msg, "use of closed network connection")
 }
 
 // IsClosed checks whether the client is closed.
@@ -433,13 +406,9 @@ func (c *SSHClient) IsClosed() bool {
 	return c == nil || c.ssh == nil
 }
 
-// Close terminates the SSH session and signals the keepAlive goroutine to stop.
+// Close terminates the SSH session.
 func (c *SSHClient) Close() {
 	log.Println("[SSH] Closing SSH connection")
-
-	c.once.Do(func() {
-		close(c.done)
-	})
 
 	if c.session != nil {
 		_ = c.session.Close()
