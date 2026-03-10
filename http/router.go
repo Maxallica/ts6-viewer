@@ -26,6 +26,20 @@ var (
 	mu sync.Mutex
 )
 
+// recoveryMiddleware catches panics in HTTP handlers and returns a 500 error
+// instead of crashing the process.
+func recoveryMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				log.Printf("[HTTP] Recovered from panic on %s: %v\n", r.URL.Path, err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			}
+		}()
+		next.ServeHTTP(w, r)
+	})
+}
+
 // NewRouter sets up all HTTP routes and returns the router.
 func NewRouter(cfg config.Config) http.Handler {
 	// parse refresh interval
@@ -144,5 +158,5 @@ func NewRouter(cfg config.Config) http.Handler {
 		w.Write([]byte("TS6Viewer is running!"))
 	})
 
-	return mux
+	return recoveryMiddleware(mux)
 }
