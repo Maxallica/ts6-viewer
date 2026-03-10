@@ -60,11 +60,10 @@ You can:
 
 # Docker Support
 
-The repository includes:
-
+This repository includes:
 - Dockerfile.sh — multi‑stage build for Go + Alpine
 - entrypoint.sh — generates config.json dynamically using environment variables
-- docker-compose.yml — ready to run the viewer with one command
+- compose.yml — ready to run the viewer with one command
 
 This allows you to run TS6 Viewer fully containerized.
 
@@ -114,16 +113,23 @@ Environment variables include:
 
 This makes the Docker container fully configurable without editing files.
 
-# docker-compose.yml
+# compose.yml
 
-A ready‑to‑use compose file is included in the project.  
-You can start the viewer with:
+The `compose.yml` file provides a straightforward example of how to configure and run the ts6viewer using Docker. It also shows how to switch between a locally built image and the official Docker Hub image:
 
 ```
-docker compose up -d
+# Use this if you built the image locally via:
+# docker build -t ts6viewer:main .
+# image: ts6viewer:main
+# Use this if you want to pull the prebuilt image from Docker Hub
+image: maxallica/ts6-viewer:latest
 ```
+
+You can find the prebuilt Docker image here
+[![Docker Pulls](https://img.shields.io/docker/pulls/maxallica/ts6-viewer.svg?logo=docker&label=pulls)](https://hub.docker.com/r/maxallica/ts6-viewer)
 
 ---
+
 
 # Building the Program
 
