@@ -20,6 +20,7 @@ type Config struct {
 
 	Theme           string `json:"theme"`
 	RefreshInterval string `json:"refresh_interval"`
+	MaxWidth        string `json:"max_width"`
 }
 
 func Load(path string) (*Config, error) {

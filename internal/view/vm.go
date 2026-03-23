@@ -5,6 +5,7 @@ type VMTS6Viewer struct {
 	VMChannels      []*VMChannel
 	Theme           string
 	RefreshInterval string
+	MaxWidth        string
 }
 
 type VMServer struct {

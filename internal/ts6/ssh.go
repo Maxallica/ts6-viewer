@@ -280,7 +280,7 @@ func (c *SSHClient) Exec(cmd string) (string, error) {
 	return c.execSafe(cmd)
 }
 
-// exec sends a raw command and reads the response.
+// exec sends a raw command and reads the response with a timeout.
 // It includes panic recovery to handle unexpected bufio errors gracefully
 // instead of crashing the process.
 func (c *SSHClient) exec(cmd string) (result string, err error) {
@@ -297,22 +297,38 @@ func (c *SSHClient) exec(cmd string) (result string, err error) {
 		return "", err
 	}
 
+	type readResult struct {
+		line string
+		err  error
+	}
+
 	var lines []string
 	var last string
 
 	for {
-		line, readErr := c.reader.ReadString('\n')
-		if readErr != nil {
-			return "", readErr
-		}
-		line = strings.TrimSpace(line)
-		lines = append(lines, line)
-		last = line
-		if strings.HasPrefix(line, "error id=") {
-			break
+		ch := make(chan readResult, 1)
+		go func() {
+			line, readErr := c.reader.ReadString('\n')
+			ch <- readResult{line, readErr}
+		}()
+
+		select {
+		case res := <-ch:
+			if res.err != nil {
+				return "", res.err
+			}
+			line := strings.TrimSpace(res.line)
+			lines = append(lines, line)
+			last = line
+			if strings.HasPrefix(line, "error id=") {
+				goto done
+			}
+		case <-time.After(15 * time.Second):
+			return "", fmt.Errorf("read timeout: no response within 15s")
 		}
 	}
 
+done:
 	raw := strings.Join(lines, "\n")
 
 	if strings.HasPrefix(last, "error id=") && last != "error id=0 msg=ok" {
@@ -425,7 +441,8 @@ func isConnectionError(err error) bool {
 		strings.Contains(msg, "broken pipe") ||
 		strings.Contains(msg, "connection reset") ||
 		strings.Contains(msg, "use of closed network connection") ||
-		strings.Contains(msg, "panic during command execution")
+		strings.Contains(msg, "panic during command execution") ||
+		strings.Contains(msg, "read timeout")
 }
 
 // IsClosed checks whether the client is closed.

@@ -68,11 +68,17 @@ func getViewerData(cfg *config.Config, force bool) (view.VMTS6Viewer, error) {
 		return view.VMTS6Viewer{}, err
 	}
 
+	maxWidth := cfg.MaxWidth
+	if maxWidth == "" {
+		maxWidth = "800px"
+	}
+
 	vmTS6Viewer := view.VMTS6Viewer{
 		VMServer:        view.BuildVMServer(cfg, info, clients),
 		VMChannels:      view.BuildVMChannels(channels, clients),
 		Theme:           cfg.Theme,
 		RefreshInterval: cfg.RefreshInterval,
+		MaxWidth:        maxWidth,
 	}
 
 	cacheData = vmTS6Viewer
