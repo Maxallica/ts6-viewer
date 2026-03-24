@@ -16,6 +16,7 @@ export USER="${USER:-serveradmin}"
 export PASSWORD="${PASSWORD:-}"
 export ENABLE_VOICE_STATUS="${ENABLE_VOICE_STATUS:-true}"
 export SERVER_ID="${SERVER_ID:-1}"
+export MAX_WIDTH="${MAX_WIDTH:-800px}"
 
 echo "[entrypoint] starting TS6 Viewer"
 
@@ -47,6 +48,7 @@ echo "  USER=$USER"
 echo "  PASSWORD=*********"
 echo "  ENABLE_VOICE_STATUS=$ENABLE_VOICE_STATUS"
 echo "  SERVER_ID=$SERVER_ID"
+echo "  MAX_WIDTH=$MAX_WIDTH"
 
 echo "[entrypoint] Starting server..."
 

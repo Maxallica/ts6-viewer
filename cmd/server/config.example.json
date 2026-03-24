@@ -11,6 +11,9 @@
   "refresh_interval": "${REFRESH_INTERVAL}",
   "_comment_refresh_interval": "How often the viewer should auto-refresh (in seconds).",
 
+  "max_width": "${MAX_WIDTH}",
+  "_comment_max_width": "Maximum width of the viewer content on wide screens (CSS value, e.g. '800px', '1200px', '100%'). Default: '800px'.",
+
   "host_connection_link": "${HOST_CONNECTION_LINK}",
   "_comment_host_connection_link": "The URL or IP address of your TeamSpeak 6 server. This is used for display purposes and should match the actual server address.",
 
