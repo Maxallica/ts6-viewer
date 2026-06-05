@@ -22,7 +22,7 @@ type ServerInfo struct {
 }
 
 func GetServerInfo(cfg *config.Config, c *SSHClient) (*ServerInfo, error) {
-	raw, err := c.exec("serverinfo")
+	raw, err := c.Exec("serverinfo")
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute serverinfo: %w", err)
 	}

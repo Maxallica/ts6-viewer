@@ -31,7 +31,7 @@ type Channel struct {
 // GetChannelList retrieves all channels using ServerQuery (SSH)
 func GetChannelList(cfg *config.Config, ssh *SSHClient) ([]Channel, error) {
 
-	raw, err := ssh.exec("channellist -topic -flags -limits -voice -icon -secondsempty")
+	raw, err := ssh.Exec("channellist -topic -flags -limits -voice -icon -secondsempty")
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute channellist: %w", err)
 	}

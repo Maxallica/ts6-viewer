@@ -45,7 +45,7 @@ func GetClientList(cfg *config.Config, ssh *SSHClient) ([]Client, error) {
 		voiceCmd = "-voice"
 	}
 
-	raw, err := ssh.exec("clientlist -uid -away -groups -times -info -country -icon " + voiceCmd)
+	raw, err := ssh.Exec("clientlist -uid -away -groups -times -info -country -icon " + voiceCmd)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute clientlist: %w", err)
 	}
