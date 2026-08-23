@@ -149,7 +149,7 @@ function updateServerInfo(vmServer) {
     if (vmServer.HostConnectionLink && vmServer.HostConnectionLink.trim() !== "") {
         serverNameHtml = `
             <h1 id="server-name">
-                <a href="ts3server://${vmServer.HostConnectionLink}">
+                <a href="teamspeak://${vmServer.HostConnectionLink}">
                     ${vmServer.Name}
                 </a>
             </h1>`;

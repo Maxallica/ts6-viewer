@@ -212,7 +212,7 @@ func newSSHClientBase(cfg *config.Config) (*SSHClient, error) {
 			c.Close()
 			return nil, err
 		}
-		if strings.Contains(line, "Welcome") || strings.Contains(line, "TS3") {
+		if strings.Contains(line, "Welcome") || strings.Contains(line, "TS") || strings.Contains(line, "Teamspeak") {
 			break
 		}
 	}
