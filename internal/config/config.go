@@ -18,7 +18,6 @@ type Config struct {
 		ServerID          string `json:"server_id"`
 	} `json:"teamspeak6"`
 
-	Theme           string `json:"theme"`
 	RefreshInterval string `json:"refresh_interval"`
 	MaxWidth        string `json:"max_width"`
 }

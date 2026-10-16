@@ -17,18 +17,102 @@ h1, h2 {
     line-height: 20px;
 }
 
-#refreshButton {
+.topbar {
     position: fixed;
     top: 10px;
     right: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 9999;
+}
+
+#refreshButton {
     background: #1f1f1f;
     border: 1px solid #333;
     padding: 6px 12px;
     font-size: 14px;
     font-weight: bold;
     color: #e5e5e5;
-    z-index: 9999;
     line-height: 16px;
+    cursor: pointer;
+}
+
+.theme-selector {
+    position: relative;
+}
+
+#themeButton {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #1f1f1f;
+    border: 1px solid #333;
+    padding: 6px 10px;
+    font-size: 14px;
+    color: #e5e5e5;
+    cursor: pointer;
+    line-height: 16px;
+}
+
+#themeButton:hover {
+    background: #2a2a2a;
+}
+
+.theme-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 280px;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+.theme-options {
+    display: flex;
+    gap: 8px;
+}
+
+.theme-option {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 84px;
+    background: #242424;
+    border: 2px solid transparent;
+    color: #e5e5e5;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 8px 4px;
+    box-sizing: border-box;
+}
+
+.theme-option i {
+    font-size: 20px;
+}
+
+.theme-option:hover {
+    background: #2e2e2e;
+}
+
+.theme-option.active {
+    border-color: #4a9eff;
+}
+
+.theme-option-name {
+    font-weight: 600;
+}
+
+.theme-option-sub {
+    font-size: 11px;
+    color: #999;
 }
 
 .server-info {

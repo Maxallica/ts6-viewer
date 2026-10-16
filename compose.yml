@@ -13,7 +13,6 @@ services:
 
     environment:
       SERVER_PORT: "8080"
-      THEME: "dark"
       REFRESH_INTERVAL: "60"
       HOST_CONNECTION_LINK: ""
 

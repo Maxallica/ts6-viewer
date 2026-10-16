@@ -34,7 +34,21 @@
 <meta charset="UTF-8">
 <title>TS6 Viewer</title>
 
-<link rel="stylesheet" href="/static/{{.Theme}}.css">
+<link id="themeStylesheet" rel="stylesheet" href="/static/dark.css">
+<script>
+// Apply the user's saved theme preference before the stylesheet loads (prevents flash)
+(function () {
+    var saved = localStorage.getItem("ts6viewer-theme");
+    var theme = (saved === "dark" || saved === "light") ? saved : "default";
+    var resolved = (theme === "default")
+        ? (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+        : theme;
+    var link = document.getElementById("themeStylesheet");
+    if (link) {
+        link.href = "/static/" + resolved + ".css";
+    }
+})();
+</script>
 <style>
 @media (min-width: 600px) {
     #channels, .server-info { max-width: {{.MaxWidth}} !important; }
@@ -50,9 +64,34 @@
 
 <body>
 
-<button id="refreshButton">
-    🔄 <span id="refreshButtonText">{{.RefreshInterval}}</span>
-</button>
+<div class="topbar">
+    <div class="theme-selector">
+        <button id="themeButton" type="button" aria-haspopup="true" aria-expanded="false">
+            <i class="fa-solid fa-palette"></i>
+            <i class="fa-solid fa-caret-down"></i>
+        </button>
+        <div id="themeMenu" class="theme-menu" hidden>
+            <div class="theme-options">
+                <button type="button" class="theme-option" data-theme="default">
+                    <i class="fa-solid fa-desktop"></i>
+                    <span class="theme-option-name">Default</span>
+                    <span class="theme-option-sub">System</span>
+                </button>
+                <button type="button" class="theme-option" data-theme="dark">
+                    <i class="fa-solid fa-moon"></i>
+                    <span class="theme-option-name">Dark</span>
+                </button>
+                <button type="button" class="theme-option" data-theme="light">
+                    <i class="fa-solid fa-sun"></i>
+                    <span class="theme-option-name">Light</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    <button id="refreshButton">
+        🔄 <span id="refreshButtonText">{{.RefreshInterval}}</span>
+    </button>
+</div>
 
 <div class="server-info">
     {{ if .VMServer.HostConnectionLink }}

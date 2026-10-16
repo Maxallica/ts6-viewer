@@ -3,7 +3,6 @@ package view
 type VMTS6Viewer struct {
 	VMServer        *VMServer
 	VMChannels      []*VMChannel
-	Theme           string
 	RefreshInterval string
 	MaxWidth        string
 }

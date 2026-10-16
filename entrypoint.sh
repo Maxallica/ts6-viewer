@@ -6,7 +6,6 @@ TARGET_ABS="/app/cmd/server/config.json"
 BINARY="/app/cmd/server/ts6viewer"
 
 export SERVER_PORT="${SERVER_PORT:-8080}"
-export THEME="${THEME:-dark}"
 export REFRESH_INTERVAL="${REFRESH_INTERVAL:-60}"
 export HOST_CONNECTION_LINK="${HOST_CONNECTION_LINK:-}"
 
@@ -40,7 +39,6 @@ echo "[entrypoint] config.json generated"
 
 echo "[entrypoint] Loaded configuration:"
 echo "  SERVER_PORT=$SERVER_PORT"
-echo "  THEME=$THEME"
 echo "  REFRESH_INTERVAL=$REFRESH_INTERVAL"
 echo "  HOST=$HOST"
 echo "  PORT=$PORT"

@@ -20,9 +20,9 @@ The viewer is designed to be:
 
 ## Features
 
-- Live TeamSpeak 6 server viewer  
-- Auto‑refresh with configurable interval  
-- Dark and light themes  
+- Live TeamSpeak 6 server viewer
+- Auto‑refresh with configurable interval
+- Dark and light themes (each web user selects their own via the theme button, with system default)
 - Channel tree rendering with clients  
 - Spacer and full‑width channel support  
 - Caching + rate‑limit protection  
@@ -102,7 +102,6 @@ The entrypoint script:
 Environment variables include:
 
 - SERVER_PORT
-- THEME
 - REFRESH_INTERVAL
 - HOST
 - PORT

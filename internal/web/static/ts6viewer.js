@@ -1,4 +1,83 @@
 // ==========================================
+// Theme selector (user preference, persisted in localStorage)
+// ==========================================
+const THEME_KEY = "ts6viewer-theme";
+const THEME_OPTIONS = ["default", "dark", "light"];
+
+function resolveTheme(theme) {
+    if (theme === "dark" || theme === "light") {
+        return theme;
+    }
+    // "default" follows the system preference
+    return (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches)
+        ? "dark"
+        : "light";
+}
+
+function applyTheme(theme) {
+    const link = document.getElementById("themeStylesheet");
+    if (link) {
+        link.href = "/static/" + resolveTheme(theme) + ".css";
+    }
+
+    // Highlight the active option in the menu
+    document.querySelectorAll(".theme-option").forEach((opt) => {
+        opt.classList.toggle("active", opt.dataset.theme === theme);
+    });
+}
+
+function initThemeSelector() {
+    const button = document.getElementById("themeButton");
+    const menu = document.getElementById("themeMenu");
+    if (!button || !menu) return;
+
+    // Restore saved preference (default: "default" = system)
+    let saved = localStorage.getItem(THEME_KEY);
+    if (!THEME_OPTIONS.includes(saved)) {
+        saved = "default";
+    }
+    applyTheme(saved);
+
+    // Toggle menu
+    button.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const open = !menu.hidden;
+        menu.hidden = open;
+        button.setAttribute("aria-expanded", String(!open));
+    });
+
+    // Select a theme
+    menu.querySelectorAll(".theme-option").forEach((opt) => {
+        opt.addEventListener("click", () => {
+            const theme = opt.dataset.theme;
+            localStorage.setItem(THEME_KEY, theme);
+            applyTheme(theme);
+            menu.hidden = true;
+            button.setAttribute("aria-expanded", "false");
+        });
+    });
+
+    // Close menu when clicking outside
+    document.addEventListener("click", (e) => {
+        if (!menu.hidden && !menu.contains(e.target) && e.target !== button) {
+            menu.hidden = true;
+            button.setAttribute("aria-expanded", "false");
+        }
+    });
+
+    // Follow system preference changes while in "default" mode
+    if (window.matchMedia) {
+        window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+            if (localStorage.getItem(THEME_KEY) === "default") {
+                applyTheme("default");
+            }
+        });
+    }
+}
+
+window.addEventListener("load", initThemeSelector);
+
+// ==========================================
 // Refresh countdown with SESSIONSTORAGE persistence
 // ==========================================
 

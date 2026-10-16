@@ -5,9 +5,6 @@
   "server_port": "${SERVER_PORT}",  
   "_comment_server_port": "The port on which the TS6 Viewer web interface will be available.",
 
-  "theme": "${THEME}",  
-  "_comment_theme": "Choose between 'light' or 'dark' for the viewer theme.",
-
   "refresh_interval": "${REFRESH_INTERVAL}",
   "_comment_refresh_interval": "How often the viewer should auto-refresh (in seconds).",
 
