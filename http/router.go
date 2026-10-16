@@ -70,8 +70,15 @@ func NewRouter(cfg config.Config) http.Handler {
 	log.Printf("[HTTP] Loaded template: %s\n", tmplPath)
 
 	// Static assets
+	// "no-cache" forces the browser to revalidate on every load (ETag/Last-Modified
+	// are sent by FileServer, so unchanged files still return a cheap 304).
+	// This ensures users automatically pick up new CSS/JS after a deploy.
 	staticPath := filepath.Join(wd, "..", "..", "internal", "web", "static")
-	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(staticPath))))
+	staticHandler := http.FileServer(http.Dir(staticPath))
+	mux.Handle("/static/", http.StripPrefix("/static/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-cache")
+		staticHandler.ServeHTTP(w, r)
+	})))
 	log.Printf("[HTTP] Static files served from: %s\n", staticPath)
 
 	// -----------------------------
@@ -133,6 +140,7 @@ func NewRouter(cfg config.Config) http.Handler {
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Header().Set("Cache-Control", "no-cache")
 		if err := tmpl.Execute(w, data); err != nil {
 			log.Printf("[HTTP] Template execution error: %v\n", err)
 		}
