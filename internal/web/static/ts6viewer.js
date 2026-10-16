@@ -225,7 +225,7 @@ function renderChannel(ch) {
                 icon = '<i class="fa-solid fa-circle status-online"></i>';
             }
 
-            html += '<div class="row client">' +
+            html += '<div class="row client" data-online-time="' + (c.OnlineTimePretty || "") + '">' +
                     icon +
                     '<span class="client-name">' + c.Nickname + '</span>' +
                     '</div>';
@@ -246,10 +246,87 @@ function renderChannel(ch) {
 }
 
 // ==========================================
+// Online-time hover tooltip (event delegation)
+// ==========================================
+function getOrCreateTooltip() {
+    let tip = document.getElementById("onlineTooltip");
+    if (!tip) {
+        tip = document.createElement("div");
+        tip.id = "onlineTooltip";
+        document.body.appendChild(tip);
+    }
+    return tip;
+}
+
+function showOnlineTooltip(row, x, y) {
+    const onlineTime = row.getAttribute("data-online-time");
+    if (!onlineTime) {
+        hideOnlineTooltip();
+        return;
+    }
+
+    const tip = getOrCreateTooltip();
+    tip.textContent = "Online: " + onlineTime;
+    tip.style.display = "block";
+
+    // Position close to the cursor, keep inside the viewport
+    const rect = tip.getBoundingClientRect();
+    let left = x + 10;
+    let top = y + 12;
+
+    if (left + rect.width > window.innerWidth - 8) {
+        left = x - rect.width - 10;
+    }
+    if (top + rect.height > window.innerHeight - 8) {
+        top = y - rect.height - 12;
+    }
+
+    tip.style.left = Math.max(8, left) + "px";
+    tip.style.top = Math.max(8, top) + "px";
+}
+
+function hideOnlineTooltip() {
+    const tip = document.getElementById("onlineTooltip");
+    if (tip) {
+        tip.style.display = "none";
+    }
+}
+
+function initOnlineTooltip() {
+    const channels = document.getElementById("channels");
+    if (!channels) return;
+
+    channels.addEventListener("mouseover", (e) => {
+        const row = e.target.closest(".row.client");
+        if (row) {
+            showOnlineTooltip(row, e.clientX, e.clientY);
+        }
+    });
+
+    channels.addEventListener("mousemove", (e) => {
+        const row = e.target.closest(".row.client");
+        if (row) {
+            showOnlineTooltip(row, e.clientX, e.clientY);
+        }
+    });
+
+    channels.addEventListener("mouseout", (e) => {
+        const row = e.target.closest(".row.client");
+        if (row && !row.contains(e.relatedTarget)) {
+            hideOnlineTooltip();
+        }
+    });
+
+    // Hide on scroll so the tooltip never lags behind the content
+    window.addEventListener("scroll", hideOnlineTooltip, true);
+}
+
+// ==========================================
 // Initial load
 // ==========================================
 window.addEventListener("load", () => {
     fetchViewerData();
+    initOnlineTooltip();
     requestAnimationFrame(updateAllSpacers);
 });
 

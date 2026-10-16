@@ -138,6 +138,22 @@ h1, h2 {
     vertical-align: middle;
 }
 
+#onlineTooltip {
+    position: fixed;
+    background: #ffffff;
+    color: #111111;
+    border: 1px solid #cccccc;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+    pointer-events: none;
+    z-index: 99999;
+    display: none;
+}
+
 .spacer {
     color: #666;
     font-weight: bold;

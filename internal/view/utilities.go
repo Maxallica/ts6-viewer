@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var reCmd = regexp.MustCompile(`(?i)\[([clr]|\*)?spacer([^\]]*?)\]`)
@@ -71,4 +72,28 @@ func MakeUptimePretty(secondsStr string) string {
 	seconds := sec % 60
 
 	return fmt.Sprintf("%dD %02d:%02d:%02d", days, hours, minutes, seconds)
+}
+
+// MakeOnlineTimePretty calculates how long a client has been online based on
+// the unix connection timestamp and formats it as "Xd HH:MM:SS".
+// Returns an empty string if the timestamp is missing or invalid.
+func MakeOnlineTimePretty(unixSeconds string) string {
+	ts, err := strconv.ParseInt(unixSeconds, 10, 64)
+	if err != nil || ts <= 0 {
+		return ""
+	}
+
+	delta := time.Now().Unix() - ts
+	if delta < 0 { // guard against clock skew
+		delta = 0
+	}
+
+	days := delta / 86400
+	delta %= 86400
+	hours := delta / 3600
+	delta %= 3600
+	minutes := delta / 60
+	seconds := delta % 60
+
+	return fmt.Sprintf("%dd %02d:%02d:%02d", days, hours, minutes, seconds)
 }

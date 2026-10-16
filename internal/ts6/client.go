@@ -109,7 +109,7 @@ func GetClientList(cfg *config.Config, ssh *SSHClient) ([]Client, error) {
 
 			case "client_idle_time":
 				cl.IdleTime = val
-			case "client_connection_connected_time":
+			case "client_lastconnected", "client_connection_time":
 				cl.ConnectionTime = val
 
 			case "client_country":

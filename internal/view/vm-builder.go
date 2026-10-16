@@ -90,9 +90,10 @@ func BuildVMChannel(ch ts6.Channel) *VMChannel {
 
 func BuildVMClient(c ts6.Client) *VMClient {
 	return &VMClient{
-		Nickname:    c.Nickname,
-		MicMuted:    c.InputMuted == "1" || c.InputHardware == "0",
-		OutputMuted: c.OutputMuted == "1",
-		IsTalking:   c.IsTalking == "1",
+		Nickname:         c.Nickname,
+		MicMuted:         c.InputMuted == "1" || c.InputHardware == "0",
+		OutputMuted:      c.OutputMuted == "1",
+		IsTalking:        c.IsTalking == "1",
+		OnlineTimePretty: MakeOnlineTimePretty(c.ConnectionTime),
 	}
 }

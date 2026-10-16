@@ -12,7 +12,7 @@
 {{if .Clients}}
 <div class="children">
     {{range .Clients}}
-        <div class="row client">
+        <div class="row client" data-online-time="{{.OnlineTimePretty}}">
             <span class="status-dot"></span>{{.Nickname}}
         </div>
     {{end}}

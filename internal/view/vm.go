@@ -20,12 +20,13 @@ type VMServer struct {
 }
 
 type VMClient struct {
-	Nickname    string
-	Platform    string
-	Version     string
-	MicMuted    bool
-	OutputMuted bool
-	IsTalking   bool
+	Nickname         string
+	Platform         string
+	Version          string
+	MicMuted         bool
+	OutputMuted      bool
+	IsTalking        bool
+	OnlineTimePretty string
 }
 
 type VMChannel struct {
