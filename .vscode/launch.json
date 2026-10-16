@@ -1,0 +1,31 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            // Launch the TS6 Viewer server. Works from any Go file in this
+            // module: breakpoints in cmd/, http/ and internal/ are all hit.
+            "name": "Debug TS6 Viewer (any file)",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/cmd/server",
+            // The server loads config.json and resolves templates relative to
+            // its working directory, so it must run from cmd/server.
+            "cwd": "${workspaceFolder}/cmd/server",
+            "env": {},
+            "showLog": true
+        },
+        {
+            // Run the tests of the package of the currently open file.
+            "name": "Test current package",
+            "type": "go",
+            "request": "launch",
+            "mode": "test",
+            "env": {},
+            "showLog": true
+        }
+    ]
+}
