@@ -14,6 +14,12 @@
     {{range .Clients}}
         <div class="row client" data-online-time="{{.OnlineTimePretty}}">
             <span class="status-dot"></span>{{.Nickname}}
+            {{if eq .Badge "admin"}}
+            <span class="badge admin">ADMIN</span>
+            {{else if eq .Badge "vip"}}
+            <span class="badge vip">VIP</span>
+            {{end}}
+            {{if .Country}}<span class="flag">{{.Country}}</span>{{end}}
         </div>
     {{end}}
 </div>
@@ -26,6 +32,28 @@
     {{end}}
 </div>
 {{end}}
+{{end}}
+
+{{define "statCell"}}
+<div class="stat-grid">
+    <span class="stat-cell">
+        <span class="stat-name">{{.Nickname}}</span>
+        {{if eq .Badge "admin"}}
+            <span class="badge admin">ADMIN</span>
+        {{else if eq .Badge "vip"}}
+            <span class="badge vip">VIP</span>
+        {{else}}
+            <span class="stat-none">—</span>
+        {{end}}
+        <span class="stat-pipe">|</span>
+        {{if .Country}}<span class="flag">{{.Country}}</span>{{end}}
+        {{if .Online}}
+            {{if .ConnectedAt}}<span class="stat-de online">since <b>{{.ConnectedAt}}</b></span>{{end}}
+        {{else}}
+            {{if .LastSeen}}<span class="stat-de offline">last seen <b>{{.LastSeen}}</b></span>{{end}}
+        {{end}}
+    </span>
+</div>
 {{end}}
 
 <!DOCTYPE html>
@@ -51,7 +79,7 @@
 </script>
 <style>
 @media (min-width: 600px) {
-    #channels, .server-info { max-width: {{.MaxWidth}} !important; }
+    #channels, #statsPanel, .server-info { max-width: {{.MaxWidth}} !important; }
 }
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -65,6 +93,12 @@
 <body>
 
 <div class="topbar">
+    <button id="statsToggle" type="button"
+            title="Toggle statistics"
+            aria-pressed="false"
+            aria-controls="statsPanel">
+        <i class="fa-solid fa-chart-column" aria-hidden="true"></i>
+    </button>
     <div class="theme-selector">
         <button id="themeButton" type="button" aria-haspopup="true" aria-expanded="false">
             <i class="fa-solid fa-palette"></i>
@@ -120,6 +154,15 @@
 <div id="channels">
     {{range .VMChannels}}
         {{template "channel" .}}
+    {{end}}
+</div>
+
+<div id="statsPanel" class="stats-panel" hidden>
+    <div class="stats-head">
+        <h2>Recent Activity</h2>
+    </div>
+    {{range .VMActivity}}
+        {{template "statCell" .}}
     {{end}}
 </div>
 

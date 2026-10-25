@@ -116,6 +116,7 @@ h1, h2 {
 }
 
 .server-info {
+    box-sizing: border-box;
     width: 100%;
     max-width: 300px;
     margin: 12px auto;
@@ -222,6 +223,12 @@ h1, h2 {
     vertical-align: middle;
 }
 
+.row.client .badge,
+.row.client .flag {
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
 #onlineTooltip {
     position: fixed;
     background: #2b2b2b;
@@ -266,6 +273,191 @@ h1, h2 {
     margin-left: 12px;
 }
 
+/* ============================================================
+   Stats toggle button (topbar, left of the theme button)
+   ============================================================ */
+#statsToggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1f1f1f;
+    border: 1px solid #333;
+    padding: 6px 10px;
+    color: #e5e5e5;
+    font-size: 15px;
+    cursor: pointer;
+    line-height: 16px;
+    transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+
+#statsToggle:hover {
+    background: #2a2a2a;
+}
+
+#statsToggle.active {
+    border-color: #4a9eff;
+    color: #4a9eff;
+    background: rgba(74, 158, 255, .10);
+}
+
+#statsToggle:focus-visible {
+    outline: 2px solid #4a9eff;
+    outline-offset: 2px;
+}
+
+/* ============================================================
+   Statistics / recent-activity panel
+   (same visual language as the app: #1a1a1a, #333, Roboto)
+   ============================================================ */
+.stats-panel {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto 12px;
+    padding: 8px 12px;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    text-align: left;
+}
+
+.stats-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 2px 2px 10px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #333;
+}
+
+.stats-head h2 {
+    margin: 0;
+    text-align: left;
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.stats-head .stats-sub {
+    font-size: 12px;
+    color: #999;
+    font-weight: 400;
+    margin-left: 8px;
+}
+
+/* Single cell: Name Badges | Country (left-packed group), time flush right */
+.stat-grid {
+    padding: 8px 2px;
+    border-bottom: 1px solid #242424;
+}
+
+.stat-grid:last-child {
+    border-bottom: none;
+}
+
+.stat-cell {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 2px 0;
+    min-width: 0;
+}
+
+.stat-pipe {
+    color: #4a4a4a;
+    margin: 0 8px;
+    user-select: none;
+}
+
+.stat-name {
+    font-weight: 600;
+    color: #fff;
+    margin-right: 8px;
+}
+
+.stat-none {
+    color: #555;
+    font-size: 12px;
+}
+
+.flag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1px 4px;
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.05);
+    font-size: 12px;
+    margin-right: 6px;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    line-height: 14px;
+    white-space: nowrap;
+}
+
+.badge i {
+    font-size: 9px;
+}
+
+.badge.admin {
+    color: #4a9eff;
+    border-color: #4a9eff;
+    background: rgba(74, 158, 255, .10);
+}
+
+.badge.vip {
+    color: #ffc857;
+    border-color: #ffc857;
+    background: rgba(255, 200, 87, .10);
+}
+
+.badge + .badge {
+    margin-left: 6px;
+}
+
+.stat-de {
+    font-size: 12px;
+    color: #999;
+    white-space: nowrap;
+    text-align: right;
+    margin-left: auto;
+}
+
+.stat-de b {
+    color: #ccc;
+    font-weight: 600;
+}
+
+.stat-de.online {
+    color: #58c26e;
+}
+
+.stat-de.online b {
+    color: #7fd98f;
+}
+
+.stat-de.offline {
+    color: #e05555;
+}
+
+.stat-de.offline b {
+    color: #ef8080;
+}
+
 @media (min-width: 600px) {
     body {
         font-size: 13px;
@@ -295,5 +487,14 @@ h1, h2 {
 
     .server-info div {
         padding: 3px 0;
+    }
+
+    .stats-panel {
+        max-width: 90%;
+        padding: 10px 14px;
+    }
+
+    .stat-de {
+        font-size: 11px;
     }
 }

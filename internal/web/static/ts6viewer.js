@@ -202,6 +202,7 @@ async function fetchViewerData(force = false) {
 
         updateServerInfo(data.VMServer);
         updateChannelTree(data.VMChannels);
+        updateStatsPanel(data.VMActivity);
         updateAllSpacers();
     } catch (err) {
         console.error("Polling error:", err);
@@ -247,6 +248,119 @@ function updateServerInfo(vmServer) {
         ${bannerHtml}
     `;
 }
+
+// ==========================================
+// Statistics panel (toggle + stat cells)
+// ==========================================
+function escapeHtml(s) {
+    return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
+// Format a unix timestamp as an absolute "last seen" time, mirroring the Go
+// MakeLastSeen helper: "HH:MM" for the current local day, "DD.MM. HH:MM" for
+// an earlier day of the same year, "DD.MM.YYYY HH:MM" for an earlier year.
+function lastSeenTime(unixSeconds) {
+    if (!unixSeconds) {
+        return "";
+    }
+    const t = new Date(unixSeconds * 1000);
+    const now = new Date();
+    const clock = String(t.getHours()).padStart(2, "0") + ":" + String(t.getMinutes()).padStart(2, "0");
+    if (t.getFullYear() === now.getFullYear() && t.getMonth() === now.getMonth() && t.getDate() === now.getDate()) {
+        return clock;
+    }
+    const day = String(t.getDate()).padStart(2, "0") + "." + String(t.getMonth() + 1).padStart(2, "0") + ".";
+    if (t.getFullYear() === now.getFullYear()) {
+        return day + " " + clock;
+    }
+    return day + t.getFullYear() + " " + clock;
+}
+
+function badgeHtmlFor(c) {
+    if (c.Badge === "admin") {
+        return '<span class="badge admin">ADMIN</span>';
+    }
+    if (c.Badge === "vip") {
+        return '<span class="badge vip">VIP</span>';
+    }
+    return "";
+}
+
+function flagHtmlFor(c) {
+    return c.Country
+        ? '<span class="flag">' + escapeHtml(c.Country) + '</span>'
+        : "";
+}
+
+function renderStatCell(c) {
+    const badgeHtml = c.Badge
+        ? badgeHtmlFor(c)
+        : '<span class="stat-none">—</span>';
+
+    let timeHtml;
+    if (c.Online) {
+        timeHtml = c.ConnectedAt
+            ? '<span class="stat-de online">since <b>' + escapeHtml(c.ConnectedAt) + '</b></span>'
+            : "";
+    } else {
+        const lastSeen = c.LastSeen || lastSeenTime(c.LastSeenAt);
+        timeHtml = '<span class="stat-de offline">last seen <b>' +
+            escapeHtml(lastSeen) + '</b></span>';
+    }
+
+    return '<div class="stat-grid">' +
+        '<span class="stat-cell">' +
+        '<span class="stat-name">' + escapeHtml(c.Nickname) + '</span>' +
+        badgeHtml +
+        '<span class="stat-pipe">|</span>' +
+        flagHtmlFor(c) +
+        timeHtml +
+        '</span>' +
+        '</div>';
+}
+
+function updateStatsPanel(activity) {
+    const panel = document.getElementById("statsPanel");
+    if (!panel) {
+        return;
+    }
+
+    let html = '<div class="stats-head"><h2>Recent Activity</h2></div>';
+    for (const c of activity || []) {
+        html += renderStatCell(c);
+    }
+    panel.innerHTML = html;
+}
+
+function initStatsToggle() {
+    const toggle = document.getElementById("statsToggle");
+    const channels = document.getElementById("channels");
+    const stats = document.getElementById("statsPanel");
+    if (!toggle || !channels || !stats) return;
+
+    function setView(showStats) {
+        stats.hidden = !showStats;
+        channels.hidden = showStats;
+        toggle.classList.toggle("active", showStats);
+        toggle.setAttribute("aria-pressed", String(showStats));
+        toggle.title = showStats ? "Back to channels" : "Toggle statistics";
+        // Swap icon: chart <-> channel tree
+        toggle.querySelector("i").className = showStats
+            ? "fa-solid fa-sitemap"
+            : "fa-solid fa-chart-column";
+    }
+
+    toggle.addEventListener("click", () => {
+        setView(stats.hidden);
+    });
+}
+
+window.addEventListener("load", initStatsToggle);
 
 // ==========================================
 // Render channel tree
@@ -307,6 +421,8 @@ function renderChannel(ch) {
             html += '<div class="row client" data-online-time="' + (c.OnlineTimePretty || "") + '">' +
                     icon +
                     '<span class="client-name">' + c.Nickname + '</span>' +
+                    badgeHtmlFor(c) +
+                    flagHtmlFor(c) +
                     '</div>';
 
         }

@@ -3,6 +3,7 @@ package view
 import (
 	"sort"
 	"strconv"
+	"strings"
 	"ts6-viewer/internal/config"
 	"ts6-viewer/internal/ts6"
 )
@@ -29,7 +30,33 @@ const (
 	AlignRight
 )
 
-func BuildVMChannels(channels []ts6.Channel, clients []ts6.Client) []*VMChannel {
+// GroupBadgeMap maps each servergroup ID to a badge label ("admin" or "vip")
+// derived from the group name. Groups whose name matches neither are omitted.
+func GroupBadgeMap(groups []ts6.ServerGroup) map[string]string {
+	badges := make(map[string]string, len(groups))
+	for _, g := range groups {
+		if badge := BadgeForGroup(g.Name); badge != "" {
+			badges[g.ID] = badge
+		}
+	}
+	return badges
+}
+
+// BadgeForGroup derives a badge label from a servergroup name: "admin" if the
+// name contains "admin", "vip" if it contains "vip", otherwise ""
+// (case-insensitive).
+func BadgeForGroup(name string) string {
+	lower := strings.ToLower(name)
+	if strings.Contains(lower, "admin") {
+		return "admin"
+	}
+	if strings.Contains(lower, "vip") {
+		return "vip"
+	}
+	return ""
+}
+
+func BuildVMChannels(channels []ts6.Channel, clients []ts6.Client, groupBadges map[string]string) []*VMChannel {
 	// Channels
 	viewMap := make(map[string]*VMChannel)
 	for _, ch := range channels {
@@ -39,7 +66,7 @@ func BuildVMChannels(channels []ts6.Channel, clients []ts6.Client) []*VMChannel 
 	// Clients
 	for _, c := range clients {
 		if vch, ok := viewMap[c.CID]; ok {
-			vch.Clients = append(vch.Clients, BuildVMClient(c))
+			vch.Clients = append(vch.Clients, BuildVMClient(c, groupBadges))
 		}
 	}
 
@@ -88,9 +115,32 @@ func BuildVMChannel(ch ts6.Channel) *VMChannel {
 	}
 }
 
-func BuildVMClient(c ts6.Client) *VMClient {
+// BadgeForClient derives the client's badge label from their servergroups:
+// "admin" if any group is an admin group, otherwise "vip" if any group is a
+// vip group, otherwise "" (priority: admin > vip).
+func BadgeForClient(serverGroups string, groupBadges map[string]string) string {
+	hasVIP := false
+	for _, id := range strings.Split(serverGroups, ",") {
+		switch groupBadges[strings.TrimSpace(id)] {
+		case "admin":
+			return "admin"
+		case "vip":
+			hasVIP = true
+		}
+	}
+	if hasVIP {
+		return "vip"
+	}
+	return ""
+}
+
+func BuildVMClient(c ts6.Client, groupBadges map[string]string) *VMClient {
 	return &VMClient{
 		Nickname:         c.Nickname,
+		UID:              c.UniqueIdentifier,
+		Badge:            BadgeForClient(c.ServerGroups, groupBadges),
+		Country:          FlagEmoji(c.Country),
+		ConnectedAt:      MakeConnectedAt(c.ConnectionTime),
 		MicMuted:         c.InputMuted == "1" || c.InputHardware == "0",
 		OutputMuted:      c.OutputMuted == "1",
 		IsTalking:        c.IsTalking == "1",

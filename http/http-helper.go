@@ -62,6 +62,12 @@ func getViewerData(cfg *config.Config, force bool) (view.VMTS6Viewer, error) {
 		return view.VMTS6Viewer{}, err
 	}
 
+	groups, err := ts6.GetServerGroups(cfg, sshClient)
+	if err != nil {
+		log.Printf("[HTTP] Failed to get servergroups: %v\n", err)
+		return view.VMTS6Viewer{}, err
+	}
+
 	info, err := ts6.GetServerInfo(cfg, sshClient)
 	if err != nil {
 		log.Printf("[HTTP] Failed to get server info: %v\n", err)
@@ -73,9 +79,12 @@ func getViewerData(cfg *config.Config, force bool) (view.VMTS6Viewer, error) {
 		maxWidth = "800px"
 	}
 
+	groupBadges := view.GroupBadgeMap(groups)
+
 	vmTS6Viewer := view.VMTS6Viewer{
 		VMServer:        view.BuildVMServer(cfg, info, clients),
-		VMChannels:      view.BuildVMChannels(channels, clients),
+		VMChannels:      view.BuildVMChannels(channels, clients, groupBadges),
+		VMActivity:      updateActivity(clients, groupBadges, time.Now().Unix()),
 		RefreshInterval: cfg.RefreshInterval,
 		MaxWidth:        maxWidth,
 	}
