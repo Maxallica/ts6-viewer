@@ -25,9 +25,33 @@ The viewer is designed to be:
 - Dark and light themes (each web user selects their own via the theme button, with system default)
 - Channel tree rendering with clients  
 - Spacer and full‑width channel support  
+- **Recent Activity** panel (toggle button in the header): online + recently offline clients, 24 h rolling
+- **24 h online-count graph** in the Recent Activity panel (TeamSpeak blue line + area, hour axis)
+- **Badges** (ADMIN / VIP from server group names) and **country flags** on client rows
 - Caching + rate‑limit protection  
 - Pure **ServerQuery (SSH)** backend  
 - Optional **voice status** (mute status, audio status, talking)  
+
+---
+
+## Recent Activity
+
+The **Recent Activity** button in the header switches the channel tree to the
+statistics panel (the button toggles back). The panel shows:
+
+- **24 h online-count graph** — line + area fill in TeamSpeak blue with an
+  hour axis. One sample is taken per data poll (10 s dedupe), kept for 24 h;
+  in-memory only, so a server restart starts the graph with a single dot.
+- **Recently offline clients** — most recent first, red
+  `last seen …` (the last time they were confirmed online).
+- **Online clients** — most recently connected first, green
+  `since HH:MM` (connection time).
+- **Badges** (ADMIN / VIP, derived from server group names, admin wins) and
+  **country flags** on every row.
+
+All times are absolute (today: `HH:MM`, same year: `DD.MM. HH:MM`, earlier
+year: `DD.MM.YYYY HH:MM`) — never relative ("just now", "2 h ago"). The
+offline list is kept for 24 h (in-memory, no persistence).
 
 ---
 
