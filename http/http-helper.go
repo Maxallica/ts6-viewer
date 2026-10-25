@@ -81,10 +81,14 @@ func getViewerData(cfg *config.Config, force bool) (view.VMTS6Viewer, error) {
 
 	groupBadges := view.GroupBadgeMap(groups)
 
+	now := time.Now().Unix()
+	sampleHistory(len(clients), now)
+
 	vmTS6Viewer := view.VMTS6Viewer{
 		VMServer:        view.BuildVMServer(cfg, info, clients),
 		VMChannels:      view.BuildVMChannels(channels, clients, groupBadges),
-		VMActivity:      updateActivity(clients, groupBadges, time.Now().Unix()),
+		VMActivity:      updateActivity(clients, groupBadges, now),
+		VMHistory:       onlineHistoryFor(now),
 		RefreshInterval: cfg.RefreshInterval,
 		MaxWidth:        maxWidth,
 	}

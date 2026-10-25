@@ -202,7 +202,7 @@ async function fetchViewerData(force = false) {
 
         updateServerInfo(data.VMServer);
         updateChannelTree(data.VMChannels);
-        updateStatsPanel(data.VMActivity);
+        updateStatsPanel(data.VMActivity, data.VMHistory);
         updateAllSpacers();
     } catch (err) {
         console.error("Polling error:", err);
@@ -324,13 +324,100 @@ function renderStatCell(c) {
         '</div>';
 }
 
-function updateStatsPanel(activity) {
+// ==========================================
+// 24 h online-count graph (responsive SVG, TeamSpeak blue line + area)
+// ==========================================
+const GRAPH = {
+    width: 640,
+    height: 190,
+    padL: 26,
+    padR: 10,
+    padT: 10,
+    padB: 24,
+    windowMs: 24 * 3600 * 1000,
+    blue: "#0370DB",
+};
+
+function graphClock(ts) {
+    const t = new Date(ts);
+    return String(t.getHours()).padStart(2, "0") + ":" + String(t.getMinutes()).padStart(2, "0");
+}
+
+function renderHistoryGraph(history) {
+    const W = GRAPH.width;
+    const H = GRAPH.height;
+    const x0 = GRAPH.padL;
+    const x1 = W - GRAPH.padR;
+    const y0 = GRAPH.padT;
+    const y1 = H - GRAPH.padB;
+
+    const now = Date.now();
+    const t0 = now - GRAPH.windowMs;
+
+    // Scale to whole hours so the axis labels are clean.
+    const samples = (history || []).filter((p) => p && p.T >= t0 / 1000);
+    let maxN = 0;
+    for (const p of samples) {
+        if (p.N > maxN) maxN = p.N;
+    }
+    // Even ceiling (>= 1) so the 0 / mid / max ticks are always integers.
+    const yMax = maxN <= 1 ? 1 : Math.ceil(maxN / 2) * 2;
+
+    const sx = (ts) => x0 + ((ts - t0) / GRAPH.windowMs) * (x1 - x0);
+    const sy = (n) => y1 - (Math.max(0, Math.min(n, yMax)) / yMax) * (y1 - y0);
+
+    // Grid + axis labels: horizontal at 0/mid/max, vertical every 3 hours.
+    let grid = "";
+    const yTicks = [0, yMax];
+    if (yMax / 2 >= 1) {
+        yTicks.splice(1, 0, yMax / 2);
+    }
+    for (const v of yTicks) {
+        const y = sy(v).toFixed(1);
+        grid += '<line class="graph-grid" x1="' + x0 + '" x2="' + x1 + '" y1="' + y + '" y2="' + y + '"/>';
+        grid += '<text class="graph-label" x="' + (x0 - 6) + '" y="' + (sy(v) + 3).toFixed(1) + '" text-anchor="end">' + v + "</text>";
+    }
+    for (let h = 24; h >= 0; h -= 3) {
+        const ts = now - h * 3600 * 1000;
+        const x = sx(ts).toFixed(1);
+        grid += '<line class="graph-grid" x1="' + x + '" x2="' + x + '" y1="' + y0 + '" y2="' + y1 + '"/>';
+        grid += '<text class="graph-label" x="' + x + '" y="' + (y1 + 16) + '" text-anchor="middle">' + graphClock(ts) + "</text>";
+    }
+
+    // Line + area fill.
+    let series = "";
+    if (samples.length === 1) {
+        const px = sx(samples[0].T * 1000).toFixed(1);
+        const py = sy(samples[0].N).toFixed(1);
+        series += '<circle class="graph-dot" cx="' + px + '" cy="' + py + '" r="2.5"/>';
+    } else if (samples.length >= 2) {
+        let d = "";
+        for (let i = 0; i < samples.length; i++) {
+            const px = sx(samples[i].T * 1000).toFixed(1);
+            const py = sy(samples[i].N).toFixed(1);
+            d += (i === 0 ? "M" : "L") + px + " " + py;
+        }
+        const first = sx(samples[0].T * 1000).toFixed(1);
+        const last = sx(samples[samples.length - 1].T * 1000).toFixed(1);
+        series += '<path class="graph-area" d="' + d + "L" + last + " " + y1 + "L" + first + " " + y1 + 'Z"/>';
+        series += '<path class="graph-line" d="' + d + '"/>';
+    }
+
+    return '<div class="stats-graph">' +
+        '<div class="stats-head"><h2>Online Clients <span class="stats-sub">last 24 h</span></h2></div>' +
+        '<svg class="stats-graph-svg" viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Online clients in the last 24 hours">' +
+        grid + series +
+        "</svg></div>";
+}
+
+function updateStatsPanel(activity, history) {
     const panel = document.getElementById("statsPanel");
     if (!panel) {
         return;
     }
 
-    let html = '<div class="stats-head"><h2>Recent Activity</h2></div>';
+    let html = renderHistoryGraph(history);
+    html += '<div class="stats-head"><h2>Recent Activity</h2></div>';
     for (const c of activity || []) {
         html += renderStatCell(c);
     }

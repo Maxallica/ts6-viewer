@@ -345,6 +345,44 @@ h1, h2 {
     margin-left: 8px;
 }
 
+/* 24h online-count graph (line + area fill, TeamSpeak blue) */
+.stats-graph {
+    margin-bottom: 6px;
+}
+
+.stats-graph-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.graph-grid {
+    stroke: #2b2b2b;
+    stroke-width: 1;
+}
+
+.graph-label {
+    font-size: 10px;
+    font-family: "Roboto", sans-serif;
+    fill: #888;
+}
+
+.graph-area {
+    fill: rgba(3, 112, 219, 0.18);
+}
+
+.graph-line {
+    fill: none;
+    stroke: #0370DB;
+    stroke-width: 2;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+
+.graph-dot {
+    fill: #0370DB;
+}
+
 /* Single cell: Name Badges | Country (left-packed group), time flush right */
 .stat-grid {
     padding: 8px 2px;

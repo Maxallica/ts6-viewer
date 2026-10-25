@@ -1,6 +1,7 @@
 package http
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -13,10 +14,62 @@ func activityClient(nickname, uid string) ts6.Client {
 	return ts6.Client{Nickname: nickname, UniqueIdentifier: uid, ConnectionTime: "1700000000"}
 }
 
+func activityClientAt(nickname, uid string, connectedAtUnix int64) ts6.Client {
+	return ts6.Client{
+		Nickname:       nickname,
+		UniqueIdentifier: uid,
+		ConnectionTime: fmt.Sprint(connectedAtUnix),
+	}
+}
+
+// TestConnectionUnix pins the raw-timestamp parsing: valid values pass
+// through, missing or invalid values map to 0.
+func TestConnectionUnix(t *testing.T) {
+	if got := connectionUnix("1700000000"); got != 1700000000 {
+		t.Errorf("connectionUnix(1700000000) = %d, want 1700000000", got)
+	}
+	for _, raw := range []string{"", "abc", "-5", "1.5"} {
+		if got := connectionUnix(raw); got != 0 {
+			t.Errorf("connectionUnix(%q) = %d, want 0", raw, got)
+		}
+	}
+}
+
+// TestUpdateActivityOnlineDescending checks that the online group is sorted
+// by connection time, most recently connected first (nickname tie-break).
+func TestUpdateActivityOnlineDescending(t *testing.T) {
+	saved := activityLog
+	activityLog = make(map[string]*activityEntry)
+	defer func() { activityLog = saved }()
+
+	now := time.Now().Unix()
+	clients := []ts6.Client{
+		activityClientAt("Early", "uid-early", now-7200),
+		activityClientAt("Late", "uid-late", now-60),
+		activityClientAt("Mid", "uid-mid", now-1800),
+	}
+
+	result := updateActivity(clients, nil, now)
+
+	want := []string{"Late", "Mid", "Early"} // most recent connection first
+	if len(result) != len(want) {
+		t.Fatalf("got %d entries, want %d: %+v", len(result), len(want), result)
+	}
+	for i, w := range want {
+		if result[i].Nickname != w {
+			t.Errorf("position %d: nickname = %q, want %q", i, result[i].Nickname, w)
+		}
+		if !result[i].Online {
+			t.Errorf("position %d: expected online", i)
+		}
+	}
+}
+
 // TestUpdateActivityOrderAndAbsoluteTime verifies that updateActivity returns
 // recently offline entries first (most recent offline first, nickname
-// tie-break), then online entries (by nickname), and that every "last seen"
-// value is an absolute time with no relative phrasing.
+// tie-break), then online entries (most recently connected first, nickname
+// tie-break), and that every "last seen" value is an absolute time with no
+// relative phrasing.
 func TestUpdateActivityOrderAndAbsoluteTime(t *testing.T) {
 	saved := activityLog
 	activityLog = make(map[string]*activityEntry)

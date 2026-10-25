@@ -4,8 +4,16 @@ type VMTS6Viewer struct {
 	VMServer        *VMServer
 	VMChannels      []*VMChannel
 	VMActivity      []*VMActivity
+	VMHistory       []*VMHistoryPoint
 	RefreshInterval string
 	MaxWidth        string
+}
+
+// VMHistoryPoint is one observation of the rolling 24h online-count graph:
+// the unix time the count was taken and how many clients were online.
+type VMHistoryPoint struct {
+	T int64
+	N int
 }
 
 type VMServer struct {
