@@ -16,6 +16,13 @@ export PASSWORD="${PASSWORD:-}"
 export ENABLE_VOICE_STATUS="${ENABLE_VOICE_STATUS:-true}"
 export SERVER_ID="${SERVER_ID:-1}"
 export MAX_WIDTH="${MAX_WIDTH:-800px}"
+export STATE_FILE="${STATE_FILE:-state.json}"
+
+# Ensure the persisted statistics state directory exists (a volume in compose).
+STATE_DIR="$(dirname "$STATE_FILE")"
+if [ ! -d "$STATE_DIR" ]; then
+  mkdir -p "$STATE_DIR" 2>/dev/null || echo "[entrypoint] WARNING: cannot create state directory: $STATE_DIR" >&2
+fi
 
 echo "[entrypoint] starting TS6 Viewer"
 

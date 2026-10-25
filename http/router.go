@@ -57,6 +57,10 @@ func NewRouter(cfg config.Config) http.Handler {
 
 	log.Printf("[HTTP] Refresh interval: %d seconds\n", refreshInterval)
 
+	// Restore the persisted statistics state (recent activity + 24h history)
+	// before the first request is served. Missing file = first start.
+	loadState()
+
 	mux := http.NewServeMux()
 
 	// Load templates

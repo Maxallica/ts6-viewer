@@ -32,3 +32,7 @@ go.work.sum
 # .vscode/
 
 cmd/server/config.json
+
+# Persisted statistics state (recent activity + 24h history), created at runtime
+state.json
+state.json.tmp

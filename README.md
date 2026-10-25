@@ -40,8 +40,7 @@ The **Recent Activity** button in the header switches the channel tree to the
 statistics panel (the button toggles back). The panel shows:
 
 - **24 h online-count graph** — line + area fill in TeamSpeak blue with an
-  hour axis. One sample is taken per data poll (10 s dedupe), kept for 24 h;
-  in-memory only, so a server restart starts the graph with a single dot.
+  hour axis. One sample is taken per data poll (10 s dedupe), kept for 24 h.
 - **Recently offline clients** — most recent first, red
   `last seen …` (the last time they were confirmed online).
 - **Online clients** — most recently connected first, green
@@ -50,8 +49,18 @@ statistics panel (the button toggles back). The panel shows:
   **country flags** on every row.
 
 All times are absolute (today: `HH:MM`, same year: `DD.MM. HH:MM`, earlier
-year: `DD.MM.YYYY HH:MM`) — never relative ("just now", "2 h ago"). The
-offline list is kept for 24 h (in-memory, no persistence).
+year: `DD.MM.YYYY HH:MM`) — never relative ("just now", "2 h ago").
+
+### Persistence
+
+The full statistics state (recent-activity list + 24 h history) is written to
+`state.json` next to `config.json` after every data fetch (atomic write,
+stale entries pruned) and reloaded at startup — so **a server restart does
+not reset the panel or the graph**; it continues from the last saved state.
+The location can be overridden with the `STATE_FILE` environment variable.
+In Docker, `compose.yml` already sets `STATE_FILE=/data/state.json` and
+mounts a named volume at `/data`, so the state also survives container
+recreation.
 
 ---
 
@@ -87,7 +96,7 @@ You can:
 This repository includes:
 - Dockerfile.sh — multi‑stage build for Go + Alpine
 - entrypoint.sh — generates config.json dynamically using environment variables
-- compose.yml — ready to run the viewer with one command
+- compose.yml — ready to run the viewer with one command (incl. a named volume for the persisted statistics state)
 
 This allows you to run TS6 Viewer fully containerized.
 
@@ -133,6 +142,7 @@ Environment variables include:
 - PASSWORD
 - ENABLE_VOICE_STATUS
 - SERVER_ID
+- STATE_FILE (location of the persisted statistics state file; default `state.json` in the working directory)
 
 This makes the Docker container fully configurable without editing files.
 

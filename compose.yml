@@ -23,4 +23,14 @@ services:
       ENABLE_VOICE_STATUS: "true"
       SERVER_ID: "1"
 
+      # Persisted statistics state (recent activity + 24h history)
+      # lives on a volume so it survives container recreation.
+      STATE_FILE: "/data/state.json"
+
+    volumes:
+      - ts6viewer-data:/data
+
     restart: unless-stopped
+
+volumes:
+  ts6viewer-data:

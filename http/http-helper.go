@@ -95,6 +95,9 @@ func getViewerData(cfg *config.Config, force bool) (view.VMTS6Viewer, error) {
 
 	cacheData = vmTS6Viewer
 	cacheTimestamp = time.Now()
+	// Persist the statistics state so it survives a server restart.
+	// mu is held for the whole fetch, so the snapshot is consistent.
+	saveState()
 	log.Println("[HTTP] Viewer data updated and cached")
 
 	return vmTS6Viewer, nil
