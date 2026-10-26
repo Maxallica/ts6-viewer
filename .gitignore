@@ -33,6 +33,13 @@ go.work.sum
 
 cmd/server/config.json
 
+# Everything under cmd/ is a local dev aid (harnesses, built exes), except the product server
+cmd/*
+!cmd/server/
+
+# Local mockups / design drafts for new modules; never part of the product
+mockups/
+
 # Persisted statistics state (recent activity + 24h history), created at runtime
 state.json
 state.json.tmp
