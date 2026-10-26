@@ -202,7 +202,8 @@ async function fetchViewerData(force = false) {
 
         updateServerInfo(data.VMServer);
         updateChannelTree(data.VMChannels);
-        updateStatsPanel(data.VMActivity, data.VMHistory);
+        updateGraphPanel(data.VMHistory);
+        updateStatsPanel(data.VMActivity);
         updateAllSpacers();
     } catch (err) {
         console.error("Polling error:", err);
@@ -261,9 +262,10 @@ function escapeHtml(s) {
         .replace(/'/g, "&#39;");
 }
 
-// Format a unix timestamp as an absolute "last seen" time, mirroring the Go
-// MakeLastSeen helper: "HH:MM" for the current local day, "DD.MM. HH:MM" for
-// an earlier day of the same year, "DD.MM.YYYY HH:MM" for an earlier year.
+// Format a unix timestamp as an absolute date + clock time, mirroring the
+// Go MakeDateTime helper: "DD.MM. HH:MM" for the current year,
+// "DD.MM.YYYY HH:MM" for an earlier year. The date is always shown so the
+// merged activity list stays unambiguous.
 function lastSeenTime(unixSeconds) {
     if (!unixSeconds) {
         return "";
@@ -271,9 +273,6 @@ function lastSeenTime(unixSeconds) {
     const t = new Date(unixSeconds * 1000);
     const now = new Date();
     const clock = String(t.getHours()).padStart(2, "0") + ":" + String(t.getMinutes()).padStart(2, "0");
-    if (t.getFullYear() === now.getFullYear() && t.getMonth() === now.getMonth() && t.getDate() === now.getDate()) {
-        return clock;
-    }
     const day = String(t.getDate()).padStart(2, "0") + "." + String(t.getMonth() + 1).padStart(2, "0") + ".";
     if (t.getFullYear() === now.getFullYear()) {
         return day + " " + clock;
@@ -305,17 +304,21 @@ function renderStatCell(c) {
     let timeHtml;
     if (c.Online) {
         timeHtml = c.ConnectedAt
-            ? '<span class="stat-de online">since <b>' + escapeHtml(c.ConnectedAt) + '</b></span>'
+            ? '<span class="stat-de">since <b>' + escapeHtml(c.ConnectedAt) + '</b></span>'
             : "";
     } else {
         const lastSeen = c.LastSeen || lastSeenTime(c.LastSeenAt);
-        timeHtml = '<span class="stat-de offline">last seen <b>' +
+        timeHtml = '<span class="stat-de">last seen <b>' +
             escapeHtml(lastSeen) + '</b></span>';
     }
 
+    // Log-like rows: the timestamp stays neutral, the status color goes on
+    // the name (green = online, red = offline).
+    const nameClass = c.Online ? "stat-name online" : "stat-name offline";
+
     return '<div class="stat-grid">' +
         '<span class="stat-cell">' +
-        '<span class="stat-name">' + escapeHtml(c.Nickname) + '</span>' +
+        '<span class="' + nameClass + '">' + escapeHtml(c.Nickname) + '</span>' +
         badgeHtml +
         '<span class="stat-pipe">|</span>' +
         flagHtmlFor(c) +
@@ -325,7 +328,9 @@ function renderStatCell(c) {
 }
 
 // ==========================================
-// 24 h online-count graph (responsive SVG, TeamSpeak blue line + area)
+// Online-count graph (responsive SVG, TeamSpeak blue line + area)
+// Time range selectable via buttons (24h / 7d / 14d / 1m), persisted in
+// localStorage, capped by the server-provided maximum range.
 // ==========================================
 const GRAPH = {
     width: 640,
@@ -334,13 +339,52 @@ const GRAPH = {
     padR: 10,
     padT: 10,
     padB: 24,
-    windowMs: 24 * 3600 * 1000,
     blue: "#0370DB",
 };
+
+const GRAPH_RANGES = {
+    "24h": 24 * 3600 * 1000,
+    "7d": 7 * 24 * 3600 * 1000,
+    "14d": 14 * 24 * 3600 * 1000,
+    "1m": 31 * 24 * 3600 * 1000,
+};
+const GRAPH_RANGE_KEY = "ts6viewer-graph-range";
+const GRAPH_RANGE_DEFAULT = "24h";
+let graphRange = GRAPH_RANGE_DEFAULT; // narrowed to the server's list on load
+let lastHistory = []; // latest history payload, re-rendered on range change
 
 function graphClock(ts) {
     const t = new Date(ts);
     return String(t.getHours()).padStart(2, "0") + ":" + String(t.getMinutes()).padStart(2, "0");
+}
+
+function graphDayLabel(ts) {
+    const t = new Date(ts);
+    return String(t.getDate()).padStart(2, "0") + "." + String(t.getMonth() + 1).padStart(2, "0") + ".";
+}
+
+// Vertical grid lines + labels for the selected range: every 3 hours for
+// 24h, every 1-2 days otherwise (always whole-day marks).
+function graphTicks(rangeMs, now) {
+    const day = 24 * 3600 * 1000;
+    const ticks = [];
+    const push = (d) => {
+        const ts = now - d * day;
+        ticks.push({ ts, label: graphDayLabel(ts) });
+    };
+    if (rangeMs <= 24 * 3600 * 1000) {
+        for (let h = 24; h >= 0; h -= 3) {
+            const ts = now - h * 3600 * 1000;
+            ticks.push({ ts, label: graphClock(ts) });
+        }
+    } else if (rangeMs <= 7 * day) {
+        for (let d = 7; d >= 0; d--) push(d);
+    } else if (rangeMs <= 14 * day) {
+        for (let d = 14; d >= 0; d -= 2) push(d);
+    } else {
+        for (let d = 31; d >= 0; d -= 7) push(d);
+    }
+    return ticks;
 }
 
 function renderHistoryGraph(history) {
@@ -351,10 +395,10 @@ function renderHistoryGraph(history) {
     const y0 = GRAPH.padT;
     const y1 = H - GRAPH.padB;
 
+    const rangeMs = GRAPH_RANGES[graphRange] || GRAPH_RANGES["24h"];
     const now = Date.now();
-    const t0 = now - GRAPH.windowMs;
+    const t0 = now - rangeMs;
 
-    // Scale to whole hours so the axis labels are clean.
     const samples = (history || []).filter((p) => p && p.T >= t0 / 1000);
     let maxN = 0;
     for (const p of samples) {
@@ -363,10 +407,10 @@ function renderHistoryGraph(history) {
     // Even ceiling (>= 1) so the 0 / mid / max ticks are always integers.
     const yMax = maxN <= 1 ? 1 : Math.ceil(maxN / 2) * 2;
 
-    const sx = (ts) => x0 + ((ts - t0) / GRAPH.windowMs) * (x1 - x0);
+    const sx = (ts) => x0 + ((ts - t0) / rangeMs) * (x1 - x0);
     const sy = (n) => y1 - (Math.max(0, Math.min(n, yMax)) / yMax) * (y1 - y0);
 
-    // Grid + axis labels: horizontal at 0/mid/max, vertical every 3 hours.
+    // Grid + axis labels: horizontal at 0/mid/max, vertical per range step.
     let grid = "";
     const yTicks = [0, yMax];
     if (yMax / 2 >= 1) {
@@ -377,11 +421,10 @@ function renderHistoryGraph(history) {
         grid += '<line class="graph-grid" x1="' + x0 + '" x2="' + x1 + '" y1="' + y + '" y2="' + y + '"/>';
         grid += '<text class="graph-label" x="' + (x0 - 6) + '" y="' + (sy(v) + 3).toFixed(1) + '" text-anchor="end">' + v + "</text>";
     }
-    for (let h = 24; h >= 0; h -= 3) {
-        const ts = now - h * 3600 * 1000;
-        const x = sx(ts).toFixed(1);
+    for (const tick of graphTicks(rangeMs, now)) {
+        const x = sx(tick.ts).toFixed(1);
         grid += '<line class="graph-grid" x1="' + x + '" x2="' + x + '" y1="' + y0 + '" y2="' + y1 + '"/>';
-        grid += '<text class="graph-label" x="' + x + '" y="' + (y1 + 16) + '" text-anchor="middle">' + graphClock(ts) + "</text>";
+        grid += '<text class="graph-label" x="' + x + '" y="' + (y1 + 16) + '" text-anchor="middle">' + tick.label + "</text>";
     }
 
     // Line + area fill.
@@ -403,25 +446,92 @@ function renderHistoryGraph(history) {
         series += '<path class="graph-line" d="' + d + '"/>';
     }
 
-    return '<div class="stats-graph">' +
-        '<div class="stats-head"><h2>Online Clients <span class="stats-sub">last 24 h</span></h2></div>' +
-        '<svg class="stats-graph-svg" viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Online clients in the last 24 hours">' +
+    return '<svg class="stats-graph-svg" viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Online clients in the last ' + graphRange + '">' +
         grid + series +
-        "</svg></div>";
+        "</svg>";
 }
 
-function updateStatsPanel(activity, history) {
-    const panel = document.getElementById("statsPanel");
-    if (!panel) {
+// Range buttons: show the ranges the server allows, persist the user's
+// choice, re-render the graph on change.
+function initGraphRanges() {
+    const panel = document.getElementById("graphPanel");
+    const holder = document.getElementById("graphRanges");
+    if (!panel || !holder) {
         return;
     }
 
-    let html = renderHistoryGraph(history);
-    html += '<div class="stats-head"><h2>Recent Activity</h2></div>';
-    for (const c of activity || []) {
-        html += renderStatCell(c);
+    const allowed = (panel.dataset.ranges || "")
+        .split(",")
+        .map((r) => r.trim())
+        .filter((r) => GRAPH_RANGES[r]);
+    if (allowed.length === 0) {
+        return;
     }
-    panel.innerHTML = html;
+
+    // Restore the saved range if still allowed, otherwise the default.
+    const saved = localStorage.getItem(GRAPH_RANGE_KEY);
+    graphRange = allowed.includes(saved) ? saved : GRAPH_RANGE_DEFAULT;
+    if (!allowed.includes(graphRange)) {
+        graphRange = allowed[0];
+    }
+
+    if (allowed.length === 1) {
+        // Single range: no buttons needed.
+        return;
+    }
+
+    holder.innerHTML = allowed
+        .map((r) =>
+            '<button type="button" class="graph-range" data-range="' + r +
+            '" aria-pressed="' + (r === graphRange) + '">' + r + "</button>"
+        )
+        .join("");
+
+    holder.addEventListener("click", (e) => {
+        const btn = e.target.closest(".graph-range");
+        if (!btn || btn.dataset.range === graphRange) {
+            return;
+        }
+        graphRange = btn.dataset.range;
+        localStorage.setItem(GRAPH_RANGE_KEY, graphRange);
+        holder.querySelectorAll(".graph-range").forEach((b) => {
+            b.classList.toggle("active", b === btn);
+            b.setAttribute("aria-pressed", String(b === btn));
+        });
+        renderGraphBody();
+    });
+
+    holder.querySelector('[data-range="' + graphRange + '"]').classList.add("active");
+}
+
+function renderGraphBody() {
+    const body = document.getElementById("graphBody");
+    if (!body) {
+        return;
+    }
+    body.innerHTML = renderHistoryGraph(lastHistory);
+}
+
+function updateGraphPanel(history) {
+    const body = document.getElementById("graphBody");
+    if (!body) {
+        return; // graph section disabled by config
+    }
+    lastHistory = history || [];
+    renderGraphBody();
+}
+
+function updateStatsPanel(activity) {
+    const panel = document.getElementById("statsPanel");
+    if (!panel) {
+        return; // recent-activity section disabled by config
+    }
+
+    const list = document.getElementById("activityList");
+    if (!list) {
+        return;
+    }
+    list.innerHTML = (activity || []).map(renderStatCell).join("");
 }
 
 function initStatsToggle() {
@@ -607,6 +717,7 @@ function initOnlineTooltip() {
 // Initial load
 // ==========================================
 window.addEventListener("load", () => {
+    initGraphRanges();
     fetchViewerData();
     initOnlineTooltip();
     requestAnimationFrame(updateAllSpacers);

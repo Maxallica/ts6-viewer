@@ -20,6 +20,15 @@ type Config struct {
 
 	RefreshInterval string `json:"refresh_interval"`
 	MaxWidth        string `json:"max_width"`
+
+	// Statistics panel settings. All values are optional; missing values fall
+	// back to defaults (graph on, recent activity on, 10 entries, 1m range).
+	Statistics struct {
+		Graph         string `json:"graph"`                   // "true" / "false" (default "true")
+		MaxRange      string `json:"graph_max_range"`         // "24h" | "7d" | "14d" | "1m" (default "1m")
+		Activity      string `json:"recent_activity"`         // "true" / "false" (default "true")
+		ActivityLimit string `json:"recent_activity_limit"`   // entry count, "0" = unlimited (default "10")
+	} `json:"statistics"`
 }
 
 func Load(path string) (*Config, error) {

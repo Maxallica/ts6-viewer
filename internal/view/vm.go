@@ -5,11 +5,21 @@ type VMTS6Viewer struct {
 	VMChannels      []*VMChannel
 	VMActivity      []*VMActivity
 	VMHistory       []*VMHistoryPoint
+	VMStats         *VMStats
 	RefreshInterval string
 	MaxWidth        string
 }
 
-// VMHistoryPoint is one observation of the rolling 24h online-count graph:
+// VMStats carries the operator's statistics display settings to the client:
+// which sections are enabled and which graph time ranges are available.
+type VMStats struct {
+	GraphEnabled    bool
+	ActivityEnabled bool
+	MaxRange        string   // one of "24h" | "7d" | "14d" | "1m"
+	Ranges          []string // enabled ranges, ordered ascending (subset of the above)
+}
+
+// VMHistoryPoint is one observation of the rolling online-count graph:
 // the unix time the count was taken and how many clients were online.
 type VMHistoryPoint struct {
 	T int64

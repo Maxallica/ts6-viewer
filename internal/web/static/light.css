@@ -345,11 +345,52 @@ h1, h2 {
     margin-left: 8px;
 }
 
-/* 24h online-count graph (line + area fill, TeamSpeak blue) */
-.stats-graph {
-    margin-bottom: 6px;
+/* Online Clients graph signboard below the server info */
+.graph-panel {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto 12px;
+    padding: 8px 12px;
+    background: #ffffff;
+    border: 1px solid #ccc;
+    text-align: left;
 }
 
+/* Time-range buttons (24h / 7d / 14d / 1m) in the graph header */
+.graph-ranges {
+    display: inline-flex;
+    gap: 4px;
+}
+
+.graph-range {
+    background: #ffffff;
+    border: 1px solid #ccc;
+    color: #333;
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'Roboto', sans-serif;
+    cursor: pointer;
+    line-height: 16px;
+}
+
+.graph-range:hover {
+    border-color: #4a9eff;
+}
+
+.graph-range.active {
+    color: #2b7cd9;
+    border-color: #4a9eff;
+    background: rgba(74, 158, 255, .12);
+}
+
+.graph-range:focus-visible {
+    outline: 2px solid #4a9eff;
+    outline-offset: 2px;
+}
+
+/* Online-count graph (line + area fill, TeamSpeak blue) */
 .stats-graph-svg {
     display: block;
     width: 100%;
@@ -412,6 +453,15 @@ h1, h2 {
     font-weight: 600;
     color: #000;
     margin-right: 8px;
+}
+
+/* Status colors on the name (log style): green = online, red = offline. */
+.stat-name.online {
+    color: #2e7d32;
+}
+
+.stat-name.offline {
+    color: #c62828;
 }
 
 .stat-none {
@@ -480,22 +530,6 @@ h1, h2 {
     font-weight: 600;
 }
 
-.stat-de.online {
-    color: #2e7d32;
-}
-
-.stat-de.online b {
-    color: #1b5e20;
-}
-
-.stat-de.offline {
-    color: #c62828;
-}
-
-.stat-de.offline b {
-    color: #b71c1c;
-}
-
 @media (min-width: 600px) {
     body {
         font-size: 13px;
@@ -528,6 +562,11 @@ h1, h2 {
     }
 
     .stats-panel {
+        max-width: 90%;
+        padding: 10px 14px;
+    }
+
+    .graph-panel {
         max-width: 90%;
         padding: 10px 14px;
     }

@@ -89,6 +89,7 @@ func getViewerData(cfg *config.Config, force bool) (view.VMTS6Viewer, error) {
 		VMChannels:      view.BuildVMChannels(channels, clients, groupBadges),
 		VMActivity:      updateActivity(clients, groupBadges, now),
 		VMHistory:       onlineHistoryFor(now),
+		VMStats:         statsViewModel(),
 		RefreshInterval: cfg.RefreshInterval,
 		MaxWidth:        maxWidth,
 	}

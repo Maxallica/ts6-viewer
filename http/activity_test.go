@@ -62,6 +62,10 @@ func TestUpdateActivityOnlineDescending(t *testing.T) {
 		if !result[i].Online {
 			t.Errorf("position %d: expected online", i)
 		}
+		// Online entries must carry an absolute date + clock time.
+		if result[i].ConnectedAt == "" || strings.Contains(result[i].ConnectedAt, ":") == false {
+			t.Errorf("position %d: expected absolute date+time, got %q", i, result[i].ConnectedAt)
+		}
 	}
 }
 

@@ -18,6 +18,11 @@ export SERVER_ID="${SERVER_ID:-1}"
 export MAX_WIDTH="${MAX_WIDTH:-800px}"
 export STATE_FILE="${STATE_FILE:-state.json}"
 
+export STATS_GRAPH="${STATS_GRAPH:-true}"
+export STATS_GRAPH_MAX_RANGE="${STATS_GRAPH_MAX_RANGE:-1m}"
+export STATS_RECENT_ACTIVITY="${STATS_RECENT_ACTIVITY:-true}"
+export STATS_RECENT_ACTIVITY_LIMIT="${STATS_RECENT_ACTIVITY_LIMIT:-10}"
+
 # Ensure the persisted statistics state directory exists (a volume in compose).
 STATE_DIR="$(dirname "$STATE_FILE")"
 if [ ! -d "$STATE_DIR" ]; then
@@ -54,6 +59,10 @@ echo "  PASSWORD=*********"
 echo "  ENABLE_VOICE_STATUS=$ENABLE_VOICE_STATUS"
 echo "  SERVER_ID=$SERVER_ID"
 echo "  MAX_WIDTH=$MAX_WIDTH"
+echo "  STATS_GRAPH=$STATS_GRAPH"
+echo "  STATS_GRAPH_MAX_RANGE=$STATS_GRAPH_MAX_RANGE"
+echo "  STATS_RECENT_ACTIVITY=$STATS_RECENT_ACTIVITY"
+echo "  STATS_RECENT_ACTIVITY_LIMIT=$STATS_RECENT_ACTIVITY_LIMIT"
 
 echo "[entrypoint] Starting server..."
 

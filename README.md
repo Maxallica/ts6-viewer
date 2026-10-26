@@ -25,38 +25,83 @@ The viewer is designed to be:
 - Dark and light themes (each web user selects their own via the theme button, with system default)
 - Channel tree rendering with clients  
 - Spacer and full‑width channel support  
-- **Recent Activity** panel (toggle button in the header): online + recently offline clients, 24 h rolling
-- **24 h online-count graph** in the Recent Activity panel (TeamSpeak blue line + area, hour axis)
+- **Online Clients graph** below the server info (TeamSpeak blue line + area) with **24 h / 7 d / 14 d / 1 m** range buttons
+- **Recent Activity** log (toggle button in the header): online + recently offline clients in one list, newest first, 24 h rolling
 - **Badges** (ADMIN / VIP from server group names) and **country flags** on client rows
 - Caching + rate‑limit protection  
 - Pure **ServerQuery (SSH)** backend  
 - Optional **voice status** (mute status, audio status, talking)  
+- Statistics sections configurable (show/hide graph & activity list, entry limit, graph range + retention)  
 
 ---
+
+## Online Clients Graph
+
+The **Online Clients** graph sits below the server info as a signboard and is
+visible in both the channel view and the activity view.
+
+- Line + area fill in TeamSpeak blue.
+- One sample per data poll (10 s dedupe); older samples are compacted into
+  15-minute averages so a month of history stays small.
+- **Range buttons** in the panel header: `24 h`, `7 d`, `14 d`, `1 m` — all
+  available by default. The choice is remembered per browser (localStorage).
+- The largest range is limited by the `graph_max_range` config value: smaller
+  ranges always stay available as buttons, and the setting also controls how
+  much history is stored (e.g. `7d` keeps only a week). Default: `1m`.
 
 ## Recent Activity
 
 The **Recent Activity** button in the header switches the channel tree to the
-statistics panel (the button toggles back). The panel shows:
+activity log (the button toggles back). The log is **one merged list**, not
+two groups:
 
-- **24 h online-count graph** — line + area fill in TeamSpeak blue with an
-  hour axis. One sample is taken per data poll (10 s dedupe), kept for 24 h.
-- **Recently offline clients** — most recent first, red
-  `last seen …` (the last time they were confirmed online).
-- **Online clients** — most recently connected first, green
-  `since HH:MM` (connection time).
+- Online and recently offline clients **together**, sorted **newest first**
+  (event time: connection start for online, last confirmed online for offline;
+  nickname as tie-breaker).
+- The **name is colored** — green = online, red = offline — like a log entry;
+  the timestamp stays neutral.
+- Every row shows an absolute date + time:
+  `since DD.MM. HH:MM` / `last seen DD.MM. HH:MM`
+  (same year: `DD.MM.YYYY HH:MM`). Never relative ("just now", "2 h ago").
 - **Badges** (ADMIN / VIP, derived from server group names, admin wins) and
   **country flags** on every row.
+- Limited to the last **10 entries by default** (`recent_activity_limit`,
+  `0` = unlimited).
 
-All times are absolute (today: `HH:MM`, same year: `DD.MM. HH:MM`, earlier
-year: `DD.MM.YYYY HH:MM`) — never relative ("just now", "2 h ago").
+### Statistics Configuration
+
+All statistics settings are optional — old `config.json` files keep working
+unchanged. New keys live in the `statistics` block:
+
+```json
+"statistics": {
+  "graph": "true",
+  "graph_max_range": "1m",
+  "recent_activity": "true",
+  "recent_activity_limit": "10"
+}
+```
+
+| Key | Meaning | Default |
+| --- | --- | --- |
+| `statistics.graph` | Show the Online Clients graph (`true`/`false`) | `true` |
+| `statistics.graph_max_range` | Largest graph range: `24h` \| `7d` \| `14d` \| `1m` (also sets history retention) | `1m` |
+| `statistics.recent_activity` | Show the Recent Activity log (`true`/`false`) | `true` |
+| `statistics.recent_activity_limit` | Number of entries to show, `0` = unlimited | `10` |
+
+Docker environment variables (same defaults): `STATS_GRAPH`,
+`STATS_GRAPH_MAX_RANGE`, `STATS_RECENT_ACTIVITY`,
+`STATS_RECENT_ACTIVITY_LIMIT`.
+
+With **both** sections disabled the statistics toggle button disappears as
+well — the viewer is then purely the channel tree.
 
 ### Persistence
 
-The full statistics state (recent-activity list + 24 h history) is written to
+The full statistics state (recent-activity log + graph history) is written to
 `state.json` next to `config.json` after every data fetch (atomic write,
 stale entries pruned) and reloaded at startup — so **a server restart does
-not reset the panel or the graph**; it continues from the last saved state.
+not reset the log or the graph**; it continues from the last saved state.
 The location can be overridden with the `STATE_FILE` environment variable.
 In Docker, `compose.yml` already sets `STATE_FILE=/data/state.json` and
 mounts a named volume at `/data`, so the state also survives container
@@ -143,6 +188,10 @@ Environment variables include:
 - ENABLE_VOICE_STATUS
 - SERVER_ID
 - STATE_FILE (location of the persisted statistics state file; default `state.json` in the working directory)
+- STATS_GRAPH (show the Online Clients graph; default `true`)
+- STATS_GRAPH_MAX_RANGE (`24h` | `7d` | `14d` | `1m`; default `1m`)
+- STATS_RECENT_ACTIVITY (show the Recent Activity log; default `true`)
+- STATS_RECENT_ACTIVITY_LIMIT (entry count, `0` = unlimited; default `10`)
 
 This makes the Docker container fully configurable without editing files.
 

@@ -32,6 +32,20 @@
 
     "server_id": "${SERVER_ID}",
     "_comment_server_id": "The ID of the virtual server you want to display. Default is usually '1'."
+  },
+
+  "statistics": {
+    "graph": "${STATS_GRAPH}",
+    "_comment_graph": "Show the Online Clients graph below the server info ('true'/'false'). Default: 'true'.",
+
+    "graph_max_range": "${STATS_GRAPH_MAX_RANGE}",
+    "_comment_graph_max_range": "Largest graph time range to offer: '24h' | '7d' | '14d' | '1m'. Smaller ranges always stay available as buttons. This also sets how much history is stored (1m ≈ 31 days). Default: '1m'.",
+
+    "recent_activity": "${STATS_RECENT_ACTIVITY}",
+    "_comment_recent_activity": "Show the Recent Activity list ('true'/'false'). Default: 'true'.",
+
+    "recent_activity_limit": "${STATS_RECENT_ACTIVITY_LIMIT}",
+    "_comment_recent_activity_limit": "Number of Recent Activity entries to display, '0' = unlimited. Default: '10'."
   }
 }
 
