@@ -113,6 +113,13 @@ In Docker, `compose.yml` already sets `STATE_FILE=/data/state.json` and
 mounts a named volume at `/data`, so the state also survives container
 recreation.
 
+If you run your own compose file, point `STATE_FILE` at a path inside one
+of your volumes (e.g. `STATE_FILE: "/app/data/state.json"` with the volume
+mounted at `/app/data`). Otherwise the state file is written to the
+container's working directory and is lost whenever the container is
+recreated — the statistics reset to an empty log and graph after every
+update.
+
 ---
 
 # ServerQuery (SSH)
