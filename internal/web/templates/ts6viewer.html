@@ -48,9 +48,9 @@
         <span class="stat-pipe">|</span>
         {{if .Country}}<span class="flag">{{.Country}}</span>{{end}}
         {{if .Online}}
-            {{if .ConnectedAt}}<span class="stat-de">since <b>{{.ConnectedAt}}</b></span>{{end}}
+            {{if .ConnectedAt}}<span class="stat-de online">since <b>{{.ConnectedAt}}</b></span>{{end}}
         {{else}}
-            {{if .LastSeen}}<span class="stat-de">last seen <b>{{.LastSeen}}</b></span>{{end}}
+            {{if .LastSeen}}<span class="stat-de offline">last seen <b>{{.LastSeen}}</b></span>{{end}}
         {{end}}
     </span>
 </div>

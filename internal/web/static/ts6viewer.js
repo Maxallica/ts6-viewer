@@ -304,16 +304,16 @@ function renderStatCell(c) {
     let timeHtml;
     if (c.Online) {
         timeHtml = c.ConnectedAt
-            ? '<span class="stat-de">since <b>' + escapeHtml(c.ConnectedAt) + '</b></span>'
+            ? '<span class="stat-de online">since <b>' + escapeHtml(c.ConnectedAt) + '</b></span>'
             : "";
     } else {
         const lastSeen = c.LastSeen || lastSeenTime(c.LastSeenAt);
-        timeHtml = '<span class="stat-de">last seen <b>' +
+        timeHtml = '<span class="stat-de offline">last seen <b>' +
             escapeHtml(lastSeen) + '</b></span>';
     }
 
-    // Log-like rows: the timestamp stays neutral, the status color goes on
-    // the name (green = online, red = offline).
+    // Log-like rows: the status color goes on the name and the timestamp
+    // (green = online, red = offline).
     const nameClass = c.Online ? "stat-name online" : "stat-name offline";
 
     return '<div class="stat-grid">' +

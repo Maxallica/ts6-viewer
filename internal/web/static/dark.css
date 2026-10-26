@@ -530,6 +530,23 @@ h1, h2 {
     font-weight: 600;
 }
 
+/* Status colors on the timestamp (green = online, red = offline). */
+.stat-de.online {
+    color: #58c26e;
+}
+
+.stat-de.online b {
+    color: #7fd98f;
+}
+
+.stat-de.offline {
+    color: #e05555;
+}
+
+.stat-de.offline b {
+    color: #ef8080;
+}
+
 @media (min-width: 600px) {
     body {
         font-size: 13px;

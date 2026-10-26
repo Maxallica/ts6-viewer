@@ -58,8 +58,8 @@ two groups:
 - Online and recently offline clients **together**, sorted **newest first**
   (event time: connection start for online, last confirmed online for offline;
   nickname as tie-breaker).
-- The **name is colored** — green = online, red = offline — like a log entry;
-  the timestamp stays neutral.
+- The **name and the timestamp are colored** — green = online, red =
+  offline — so each entry reads like a colored log line.
 - Every row shows an absolute date + time:
   `since DD.MM. HH:MM` / `last seen DD.MM. HH:MM`
   (same year: `DD.MM.YYYY HH:MM`). Never relative ("just now", "2 h ago").

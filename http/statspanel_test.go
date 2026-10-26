@@ -62,12 +62,18 @@ func TestStatsPanelOfflineRender(t *testing.T) {
 		}
 	}
 
-	// The status color is on the name (log style); the timestamp stays neutral.
+	// Both the name and the timestamp carry the status color.
 	if !strings.Contains(out, `class="stat-name online"`) {
 		t.Error("expected online name marker class in output")
 	}
 	if !strings.Contains(out, `class="stat-name offline"`) {
 		t.Error("expected offline name marker class in output")
+	}
+	if !strings.Contains(out, `class="stat-de online"`) {
+		t.Error("expected online timestamp marker class in output")
+	}
+	if !strings.Contains(out, `class="stat-de offline"`) {
+		t.Error("expected offline timestamp marker class in output")
 	}
 }
 
