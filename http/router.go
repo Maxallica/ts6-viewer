@@ -57,8 +57,15 @@ func NewRouter(cfg config.Config) http.Handler {
 
 	log.Printf("[HTTP] Refresh interval: %d seconds\n", refreshInterval)
 
-	// Restore the persisted statistics state (recent activity + 24h history)
-	// before the first request is served. Missing file = first start.
+	// Apply the statistics display settings (graph on/off, activity on/off,
+	// entry limit, max graph range). Must run before loadState so the
+	// configured history window is used when pruning the persisted state.
+	parseStatsConfig(cfg)
+	log.Printf("[HTTP] Statistics: graph=%v activity=%v limit=%d maxRange=%s showOnMainPage=%v\n",
+		statsGraphEnabled, statsActivityEnabled, activityLimit, statsMaxRange, statsShowOnMainPage)
+
+	// Restore the persisted statistics state (recent activity + graph
+	// history) before the first request is served. Missing file = first start.
 	loadState()
 
 	mux := http.NewServeMux()

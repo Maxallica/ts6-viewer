@@ -128,6 +128,25 @@ func formatClock(unixSeconds int64) string {
 	return time.Unix(unixSeconds, 0).Format("15:04")
 }
 
+// MakeDateTime formats a unix timestamp as an absolute date + clock time:
+// "DD.MM. HH:MM" for the current year, "DD.MM.YYYY HH:MM" for an earlier
+// year. Unlike MakeLastSeen the date is always shown, so entries from
+// different days stay unambiguous in a single sorted list.
+// Returns an empty string if the timestamp is missing or invalid.
+func MakeDateTime(unixSeconds int64) string {
+	if unixSeconds <= 0 {
+		return ""
+	}
+
+	t := time.Unix(unixSeconds, 0)
+	now := time.Now()
+	clock := t.Format("15:04")
+	if t.Year() == now.Year() {
+		return t.Format("02.01.") + " " + clock
+	}
+	return t.Format("02.01.2006") + " " + clock
+}
+
 // MakeOnlineTimePretty calculates how long a client has been online based on
 // the unix connection timestamp and formats it as "Xd HH:MM:SS".
 // Returns an empty string if the timestamp is missing or invalid.

@@ -32,6 +32,12 @@ func TestStatsPanelOfflineRender(t *testing.T) {
 		},
 		RefreshInterval: "60",
 		MaxWidth:        "1000px",
+		VMStats: &view.VMStats{
+			GraphEnabled:    true,
+			ActivityEnabled: true,
+			MaxRange:        "7d",
+			Ranges:          []string{"24h", "7d"},
+		},
 		VMActivity: []*view.VMActivity{
 			{Nickname: "Live", Badge: "admin", Country: "DE", ConnectedAt: "10:00", Online: true},
 			{Nickname: "Ghost", Badge: "vip", Country: "FR", ConnectedAt: "09:00", Online: false, LastSeenAt: lastSeenAt, LastSeen: lastSeen},
@@ -48,18 +54,96 @@ func TestStatsPanelOfflineRender(t *testing.T) {
 		"Live", "Ghost",
 		"ADMIN", "VIP",
 		"since", "last seen", lastSeen,
+		// Graph section (statistics view) with its range buttons.
+		`class="graph-panel"`, `class="graph-ranges"`, `data-ranges="24h,7d"`,
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("expected output to contain %q", want)
 		}
 	}
 
-	// The entries must carry the online/offline marker classes.
+	// Both the name and the timestamp carry the status color.
+	if !strings.Contains(out, `class="stat-name online"`) {
+		t.Error("expected online name marker class in output")
+	}
+	if !strings.Contains(out, `class="stat-name offline"`) {
+		t.Error("expected offline name marker class in output")
+	}
 	if !strings.Contains(out, `class="stat-de online"`) {
-		t.Error("expected online stat marker class in output")
+		t.Error("expected online timestamp marker class in output")
 	}
 	if !strings.Contains(out, `class="stat-de offline"`) {
-		t.Error("expected offline stat marker class in output")
+		t.Error("expected offline timestamp marker class in output")
+	}
+
+	// Default (ShowOnMainPage false): the graph lives inside the statistics
+	// view only, so exactly one graph-panel instance is rendered.
+	if n := strings.Count(out, `class="graph-panel"`); n != 1 {
+		t.Errorf("expected exactly one graph-panel instance, got %d", n)
+	}
+}
+
+// TestStatsGraphOnMainPage ensures that enabling show_on_main_page mirrors
+// the Online Clients graph onto the main page below the server info (two
+// graph-panel instances: main page + statistics view).
+func TestStatsGraphOnMainPage(t *testing.T) {
+	tmpl := template.Must(template.ParseFiles("../internal/web/templates/ts6viewer.html"))
+
+	data := view.VMTS6Viewer{
+		VMServer:        &view.VMServer{Name: "Test"},
+		RefreshInterval: "60",
+		MaxWidth:        "1000px",
+		VMStats: &view.VMStats{
+			GraphEnabled:     true,
+			ActivityEnabled:  false,
+			MaxRange:         "7d",
+			Ranges:           []string{"24h", "7d"},
+			ShowOnMainPage:   true,
+		},
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
+		t.Fatalf("template execution failed: %v", err)
+	}
+
+	out := buf.String()
+	if n := strings.Count(out, `class="graph-panel"`); n != 2 {
+		t.Errorf("expected two graph-panel instances (main page + stats view), got %d", n)
+	}
+	if !strings.Contains(out, `id="statsToggle"`) {
+		t.Error("expected the stats toggle when only the graph is enabled")
+	}
+	if strings.Contains(out, `id="activityList"`) {
+		t.Error("expected no activity list when activity is disabled")
+	}
+}
+
+// TestStatsSectionsDisabled ensures that when the operator disables both
+// statistics sections, neither the graph signboard, the stats panel, nor the
+// toggle button is rendered at all.
+func TestStatsSectionsDisabled(t *testing.T) {
+	tmpl := template.Must(template.ParseFiles("../internal/web/templates/ts6viewer.html"))
+
+	data := view.VMTS6Viewer{
+		VMServer: &view.VMServer{Name: "Test"},
+		VMStats: &view.VMStats{
+			GraphEnabled:    false,
+			ActivityEnabled: false,
+		},
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
+		t.Fatalf("template execution failed: %v", err)
+	}
+
+	out := buf.String()
+	// The style block still references the classes, so check the elements.
+	for _, absent := range []string{`class="graph-panel"`, `id="statsPanel"`, `id="statsToggle"`} {
+		if strings.Contains(out, absent) {
+			t.Errorf("expected %q to be absent when both sections are disabled", absent)
+		}
 	}
 }
 

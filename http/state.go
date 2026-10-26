@@ -8,7 +8,7 @@ import (
 )
 
 // stateFile holds the persisted statistics state (recent-activity log and
-// 24h online-count history). By default it lives in the working directory,
+// online-count history). By default it lives in the working directory,
 // same convention as config.json, and is replaced atomically (write temp
 // file, then rename) so a crash mid-write never corrupts it. The
 // STATE_FILE environment variable can override the location (Docker
@@ -47,7 +47,7 @@ type persistedState struct {
 // loadState restores the persisted statistics state at startup (before the
 // first request). A missing file is a normal first start; an unreadable
 // file is logged and ignored. Entries and samples that already fell out
-// of their 24h windows are dropped.
+// of their configured windows are dropped.
 func loadState() {
 	raw, err := os.ReadFile(stateFile)
 	if err != nil {

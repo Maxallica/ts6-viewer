@@ -36,9 +36,23 @@ func connectionUnix(raw string) int64 {
 // (getViewerData holds it for the whole fetch).
 var activityLog = make(map[string]*activityEntry)
 
+// activityLimit caps the displayed list (set from config); 0 = unlimited.
+var activityLimit = 10
+
+// eventTime returns the timestamp that orders an entry in the merged,
+// descending activity list: the connection start for online clients, the
+// last confirmed-online time for offline clients (both what is displayed).
+func (e *activityEntry) eventTime() int64 {
+	if e.offlineAt == 0 && e.connectedAtUnix > 0 {
+		return e.connectedAtUnix
+	}
+	return e.onlineAt
+}
+
 // updateActivity reconciles the rolling log with the currently online clients
-// and returns the list to display: recently offline clients first (most recent
-// offline first), then online clients (most recently connected first).
+// and returns the merged list to display: online and offline entries in one
+// list, most recent event first (online: connection time, offline: last
+// seen), nickname as tie-break.
 func updateActivity(clients []ts6.Client, groupBadges map[string]string, now int64) []*view.VMActivity {
 
 	seen := make(map[string]bool, len(clients))
@@ -50,9 +64,10 @@ func updateActivity(clients []ts6.Client, groupBadges map[string]string, now int
 		seen[c.UniqueIdentifier] = true
 		badge := view.BadgeForClient(c.ServerGroups, groupBadges)
 		country := view.FlagEmoji(c.Country)
-		connectedAt := view.MakeConnectedAt(c.ConnectionTime)
 
 		connectedAtUnix := connectionUnix(c.ConnectionTime)
+		// Absolute date + clock time so the merged list stays readable.
+		connectedAt := view.MakeDateTime(connectedAtUnix)
 
 		e, ok := activityLog[c.UniqueIdentifier]
 		if !ok {
@@ -102,50 +117,37 @@ func updateActivity(clients []ts6.Client, groupBadges map[string]string, now int
 		entries = append(entries, e)
 	}
 
-	online := make([]*activityEntry, 0)
-	offline := make([]*activityEntry, 0)
-	for _, e := range entries {
-		if e.offlineAt == 0 {
-			online = append(online, e)
-		} else {
-			offline = append(offline, e)
+	// Merge online + offline into one list, most recent event first.
+	sort.Slice(entries, func(i, j int) bool {
+		if entries[i].eventTime() != entries[j].eventTime() {
+			return entries[i].eventTime() > entries[j].eventTime()
 		}
-	}
-	sort.Slice(online, func(i, j int) bool {
-		if online[i].connectedAtUnix != online[j].connectedAtUnix {
-			return online[i].connectedAtUnix > online[j].connectedAtUnix // most recent connection first
-		}
-		return online[i].nickname < online[j].nickname
-	})
-	sort.Slice(offline, func(i, j int) bool {
-		if offline[i].offlineAt != offline[j].offlineAt {
-			return offline[i].offlineAt > offline[j].offlineAt // most recent first
-		}
-		return offline[i].nickname < offline[j].nickname
+		return entries[i].nickname < entries[j].nickname
 	})
 
 	result := make([]*view.VMActivity, 0, len(entries))
-	for _, e := range offline {
+	for _, e := range entries {
+		connectedAt := e.connectedAt
+		// Online entry without a known connection time: fall back to the
+		// last confirmed-online time so the row still carries a timestamp.
+		if e.offlineAt == 0 && connectedAt == "" && e.onlineAt > 0 {
+			connectedAt = view.MakeDateTime(e.onlineAt)
+		}
 		result = append(result, &view.VMActivity{
 			Nickname:    e.nickname,
 			Badge:       e.badge,
 			Country:     e.country,
-			ConnectedAt: e.connectedAt,
-			Online:      false,
+			ConnectedAt: connectedAt,
+			Online:      e.offlineAt == 0,
 			LastSeenAt:  e.onlineAt,
 			LastSeen:    view.MakeLastSeen(e.onlineAt),
 		})
 	}
-	for _, e := range online {
-		result = append(result, &view.VMActivity{
-			Nickname:    e.nickname,
-			Badge:       e.badge,
-			Country:     e.country,
-			ConnectedAt: e.connectedAt,
-			Online:      true,
-			LastSeenAt:  e.onlineAt,
-			LastSeen:    view.MakeLastSeen(e.onlineAt),
-		})
+
+	// Cap the displayed list (0 = unlimited). The full log stays persisted,
+	// so the cap only affects the display.
+	if activityLimit > 0 && len(result) > activityLimit {
+		result = result[:activityLimit]
 	}
 
 	return result

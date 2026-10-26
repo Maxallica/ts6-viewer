@@ -345,11 +345,67 @@ h1, h2 {
     margin-left: 8px;
 }
 
-/* 24h online-count graph (line + area fill, TeamSpeak blue) */
-.stats-graph {
-    margin-bottom: 6px;
+/* Online Clients graph panel (main-page mirror and statistics view) */
+.graph-panel {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto 12px;
+    padding: 8px 12px;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    text-align: left;
 }
 
+/* Inside the statistics view the graph is a section of the card, not a
+   standalone signboard */
+.stats-panel .graph-panel {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    background: none;
+    border: none;
+}
+
+/* Section heading (e.g. "Recent Activity") below the graph gets separated */
+.stats-panel > .stats-head:not(:first-child) {
+    margin-top: 12px;
+}
+
+/* Time-range buttons (24h / 7d / 14d / 1m) in the graph header */
+.graph-ranges {
+    display: inline-flex;
+    gap: 4px;
+}
+
+.graph-range {
+    background: #1f1f1f;
+    border: 1px solid #333;
+    color: #e5e5e5;
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'Roboto', sans-serif;
+    cursor: pointer;
+    line-height: 16px;
+}
+
+.graph-range:hover {
+    border-color: #4a9eff;
+}
+
+.graph-range.active {
+    color: #4a9eff;
+    border-color: #4a9eff;
+    background: rgba(74, 158, 255, .10);
+}
+
+.graph-range:focus-visible {
+    outline: 2px solid #4a9eff;
+    outline-offset: 2px;
+}
+
+/* Online-count graph (line + area fill, TeamSpeak blue) */
 .stats-graph-svg {
     display: block;
     width: 100%;
@@ -412,6 +468,15 @@ h1, h2 {
     font-weight: 600;
     color: #fff;
     margin-right: 8px;
+}
+
+/* Status colors on the name (log style): green = online, red = offline. */
+.stat-name.online {
+    color: #7fd98f;
+}
+
+.stat-name.offline {
+    color: #ef8080;
 }
 
 .stat-none {
@@ -480,6 +545,7 @@ h1, h2 {
     font-weight: 600;
 }
 
+/* Status colors on the timestamp (green = online, red = offline). */
 .stat-de.online {
     color: #58c26e;
 }
@@ -528,6 +594,11 @@ h1, h2 {
     }
 
     .stats-panel {
+        max-width: 90%;
+        padding: 10px 14px;
+    }
+
+    .graph-panel {
         max-width: 90%;
         padding: 10px 14px;
     }

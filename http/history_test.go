@@ -30,12 +30,18 @@ func TestHistorySampleDedup(t *testing.T) {
 	}
 }
 
-// TestHistoryPurge checks that samples older than the 24h window are dropped
-// and that the returned view model series is ordered oldest first.
+// TestHistoryPurge checks that samples older than the configured window are
+// dropped and that the returned view model series is ordered oldest first.
+// The window is set explicitly so the test does not depend on the default.
 func TestHistoryPurge(t *testing.T) {
-	saved := onlineHistory
+	savedHist := onlineHistory
+	savedWindow := historyWindow
 	onlineHistory = nil
-	defer func() { onlineHistory = saved }()
+	historyWindow = 24 * time.Hour
+	defer func() {
+		onlineHistory = savedHist
+		historyWindow = savedWindow
+	}()
 
 	now := time.Now().Unix()
 
