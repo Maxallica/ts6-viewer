@@ -105,7 +105,7 @@
 <body>
 
 <div class="topbar">
-    {{if or .VMStats.GraphEnabled .VMStats.ActivityEnabled}}
+    {{if or (and .VMStats.GraphEnabled (not .VMStats.ShowOnMainPage)) .VMStats.ActivityEnabled}}
     <button id="statsToggle" type="button"
             title="Toggle statistics"
             aria-pressed="false"
@@ -175,9 +175,9 @@
     {{end}}
 </div>
 
-{{if or .VMStats.GraphEnabled .VMStats.ActivityEnabled}}
+{{if or (and .VMStats.GraphEnabled (not .VMStats.ShowOnMainPage)) .VMStats.ActivityEnabled}}
 <div id="statsPanel" class="stats-panel" hidden>
-    {{if .VMStats.GraphEnabled}}
+    {{if and .VMStats.GraphEnabled (not .VMStats.ShowOnMainPage)}}
         {{template "graphPanel" .}}
     {{end}}
     {{if .VMStats.ActivityEnabled}}

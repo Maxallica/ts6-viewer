@@ -25,7 +25,7 @@ The viewer is designed to be:
 - Dark and light themes (each web user selects their own via the theme button, with system default)
 - Channel tree rendering with clients  
 - Spacer and full‑width channel support  
-- **Statistics view** (toggle button in the header) with an **Online Clients graph** (TeamSpeak blue line + area, **24 h / 7 d / 14 d / 1 m** range buttons) and a **Recent Activity** log — optionally also mirrored onto the main page below the server info
+- **Statistics view** (toggle button in the header) with the **Online Clients graph** (TeamSpeak blue line + area, **24 h / 7 d / 14 d / 1 m** range buttons) and a **Recent Activity** log — the graph can instead be displayed on the main page below the server info (it is then never shown twice)
 - **Badges** (ADMIN / VIP from server group names) and **country flags** on client rows
 - Caching + rate‑limit protection  
 - Pure **ServerQuery (SSH)** backend  
@@ -36,9 +36,11 @@ The viewer is designed to be:
 
 ## Online Clients Graph
 
-The **Online Clients** graph lives in the **statistics view** (toggle button
-in the header). With `show_on_main_page` set to `"true"` it is additionally
-mirrored onto the main page below the server info.
+The **Online Clients** graph is shown exactly once: by default it lives in
+the **statistics view** (toggle button in the header). With
+`show_on_main_page` set to `"true"` it is displayed on the main page below
+the server info instead — the statistics view then only contains the
+activity log, so the graph never appears twice.
 
 - Line + area fill in TeamSpeak blue.
 - The y‑axis always uses clean, round ticks (steps of 1/2/5 × 10ⁿ, integer ≥ 1).
@@ -53,9 +55,9 @@ mirrored onto the main page below the server info.
 ## Recent Activity
 
 The statistics toggle in the header switches the channel tree to the
-statistics view — the Online Clients graph (if enabled) and the activity log
-below it (the toggle switches back). The log is **one merged list**, not
-two groups:
+statistics view — the activity log, and the Online Clients graph as well when
+it is not displayed on the main page (the toggle switches back). The log is
+**one merged list**, not two groups:
 
 - Online and recently offline clients **together**, sorted **newest first**
   (event time: connection start for online, last confirmed online for offline;
@@ -89,7 +91,7 @@ unchanged. New keys live in the `statistics` block:
 | --- | --- | --- |
 | `statistics.graph` | Enable the Online Clients graph in the statistics view (`true`/`false`) | `true` |
 | `statistics.graph_max_range` | Largest graph range: `24h` \| `7d` \| `14d` \| `1m` (also sets history retention) | `1m` |
-| `statistics.show_on_main_page` | Also show the graph on the main page below the server info (`true`/`false`) | `false` |
+| `statistics.show_on_main_page` | Show the graph on the main page below the server info — it is then not shown again in the statistics view (`true`/`false`) | `false` |
 | `statistics.recent_activity` | Show the Recent Activity log (`true`/`false`) | `true` |
 | `statistics.recent_activity_limit` | Number of entries to show, `0` = unlimited | `10` |
 

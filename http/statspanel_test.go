@@ -83,9 +83,11 @@ func TestStatsPanelOfflineRender(t *testing.T) {
 	}
 }
 
-// TestStatsGraphOnMainPage ensures that enabling show_on_main_page mirrors
-// the Online Clients graph onto the main page below the server info (two
-// graph-panel instances: main page + statistics view).
+// TestStatsGraphOnMainPage ensures that enabling show_on_main_page places the
+// Online Clients graph on the main page below the server info — exactly one
+// graph-panel instance in total (no duplicate inside the statistics view) —
+// and that the empty panel and its toggle are not rendered at all when the
+// activity log is disabled.
 func TestStatsGraphOnMainPage(t *testing.T) {
 	tmpl := template.Must(template.ParseFiles("../internal/web/templates/ts6viewer.html"))
 
@@ -94,11 +96,11 @@ func TestStatsGraphOnMainPage(t *testing.T) {
 		RefreshInterval: "60",
 		MaxWidth:        "1000px",
 		VMStats: &view.VMStats{
-			GraphEnabled:     true,
-			ActivityEnabled:  false,
-			MaxRange:         "7d",
-			Ranges:           []string{"24h", "7d"},
-			ShowOnMainPage:   true,
+			GraphEnabled:    true,
+			ActivityEnabled: false,
+			MaxRange:        "7d",
+			Ranges:          []string{"24h", "7d"},
+			ShowOnMainPage:  true,
 		},
 	}
 
@@ -108,14 +110,60 @@ func TestStatsGraphOnMainPage(t *testing.T) {
 	}
 
 	out := buf.String()
-	if n := strings.Count(out, `class="graph-panel"`); n != 2 {
-		t.Errorf("expected two graph-panel instances (main page + stats view), got %d", n)
+	if n := strings.Count(out, `class="graph-panel"`); n != 1 {
+		t.Errorf("expected exactly one graph-panel instance (main page only), got %d", n)
 	}
-	if !strings.Contains(out, `id="statsToggle"`) {
-		t.Error("expected the stats toggle when only the graph is enabled")
+	if strings.Contains(out, `id="statsToggle"`) {
+		t.Error("expected no stats toggle when the statistics panel would be empty")
+	}
+	if strings.Contains(out, `id="statsPanel"`) {
+		t.Error("expected no stats panel when the statistics panel would be empty")
 	}
 	if strings.Contains(out, `id="activityList"`) {
 		t.Error("expected no activity list when activity is disabled")
+	}
+}
+
+// TestStatsGraphOnMainPageWithActivity ensures that when the graph lives on
+// the main page, the statistics view shows the activity log WITHOUT a second
+// graph: exactly one graph-panel instance in total, plus the toggle and the
+// activity list.
+func TestStatsGraphOnMainPageWithActivity(t *testing.T) {
+	tmpl := template.Must(template.ParseFiles("../internal/web/templates/ts6viewer.html"))
+
+	data := view.VMTS6Viewer{
+		VMServer:        &view.VMServer{Name: "Test"},
+		RefreshInterval: "60",
+		MaxWidth:        "1000px",
+		VMStats: &view.VMStats{
+			GraphEnabled:    true,
+			ActivityEnabled: true,
+			MaxRange:        "7d",
+			Ranges:          []string{"24h", "7d"},
+			ShowOnMainPage:  true,
+		},
+		VMActivity: []*view.VMActivity{
+			{Nickname: "Live", Badge: "admin", Country: "DE", ConnectedAt: "10:00", Online: true},
+		},
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
+		t.Fatalf("template execution failed: %v", err)
+	}
+
+	out := buf.String()
+	if n := strings.Count(out, `class="graph-panel"`); n != 1 {
+		t.Errorf("expected exactly one graph-panel instance (main page only), got %d", n)
+	}
+	if !strings.Contains(out, `id="statsToggle"`) {
+		t.Error("expected the stats toggle for the activity log")
+	}
+	if !strings.Contains(out, `id="statsPanel"`) {
+		t.Error("expected the stats panel for the activity log")
+	}
+	if !strings.Contains(out, `id="activityList"`) {
+		t.Error("expected the activity list")
 	}
 }
 

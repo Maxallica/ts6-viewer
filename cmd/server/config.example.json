@@ -42,7 +42,7 @@
     "_comment_graph_max_range": "Largest graph time range to offer: '24h' | '7d' | '14d' | '1m'. Smaller ranges always stay available as buttons. This also sets how much history is stored (1m ≈ 31 days). Default: '1m'.",
 
     "show_on_main_page": "${STATS_SHOW_ON_MAIN_PAGE}",
-    "_comment_show_on_main_page": "Also show the Online Clients graph on the main page below the server info ('true'/'false'). Default: 'false'.",
+    "_comment_show_on_main_page": "Also show the Online Clients graph on the main page below the server info ('true'/'false'). The graph is then shown only there, not again in the statistics view, so it never appears twice. Default: 'false'.",
 
     "recent_activity": "${STATS_RECENT_ACTIVITY}",
     "_comment_recent_activity": "Show the Recent Activity list ('true'/'false'). Default: 'true'.",
