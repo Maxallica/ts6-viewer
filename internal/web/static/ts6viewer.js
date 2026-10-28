@@ -348,6 +348,22 @@ const GRAPH_RANGES = {
     "14d": 14 * 24 * 3600 * 1000,
     "1m": 31 * 24 * 3600 * 1000,
 };
+// Bucket size (seconds, matching the unix-seconds timestamps of the
+// history payload) per range. Before drawing, the raw samples are
+// aggregated into fixed wall-clock buckets (average online count per
+// bucket) so the shape of the curve no longer depends on how often the
+// page happened to be polled: the 0/1 oscillation of quiet hours
+// averages out, and fast evening jumps are spread over their bucket
+// instead of drawing as near-vertical steps. Buckets are anchored at
+// epoch boundaries, so a sample always lands in the same bucket no
+// matter when the graph is rendered.
+const GRAPH_BUCKETS = {
+    "24h": 15 * 60,
+    "7d": 3600,
+    "14d": 2 * 3600,
+    "1m": 8 * 3600,
+};
+
 const GRAPH_RANGE_KEY = "ts6viewer-graph-range";
 const GRAPH_RANGE_DEFAULT = "24h";
 let graphRange = GRAPH_RANGE_DEFAULT; // narrowed to the server's list on load
@@ -463,6 +479,37 @@ function niceGraphScale(maxN) {
     return { max: Math.ceil(maxN / step) * step, step };
 }
 
+// Aggregate the samples of one graph window into fixed time buckets and
+// return the points to draw, oldest first: one point per non-empty
+// bucket, positioned at the bucket's start (an epoch-aligned wall-clock
+// boundary such as 14:15:00) with the bucket's average online count.
+// Empty buckets (no page opened to poll) are dropped entirely, so gaps
+// between the points are visible instead of being filled with "0".
+// With bucketSec <= 0 the samples are returned unchanged.
+function bucketHistorySamples(samples, bucketSec) {
+    samples = samples || [];
+    if (!bucketSec || bucketSec <= 0) {
+        return samples.map((s) => ({ T: s.T, N: s.N }));
+    }
+    const byBucket = new Map();
+    for (const s of samples) {
+        const key = Math.floor(s.T / bucketSec);
+        const b = byBucket.get(key);
+        if (b) {
+            b.sum += s.N;
+            b.cnt += 1;
+        } else {
+            byBucket.set(key, { sum: s.N, cnt: 1 });
+        }
+    }
+    const pts = [];
+    byBucket.forEach((b, key) => {
+        pts.push({ T: key * bucketSec, N: b.sum / b.cnt });
+    });
+    pts.sort((a, b) => a.T - b.T);
+    return pts;
+}
+
 // ---------------------------------------------------------------------------
 // Hover tooltip (pure helpers, DOM-free so they can be unit-tested locally)
 // ---------------------------------------------------------------------------
@@ -480,6 +527,13 @@ function graphNearestIndex(samples, x) {
         }
     }
     return best;
+}
+
+// Tooltip value line: the drawn points are bucket averages, so the count
+// can be fractional — show up to one decimal without a trailing ".0".
+function graphOnlineLabel(n) {
+    const r = Math.round(n * 10) / 10;
+    return (Number.isInteger(r) ? String(r) : r.toFixed(1)) + " online";
 }
 
 // Tooltip time line: clock time for the 24h range (plus the date when the
@@ -521,7 +575,11 @@ function renderHistoryGraph(history) {
     const now = Date.now();
     const t0 = now - rangeMs;
 
-    const samples = (history || []).filter((p) => p && p.T >= t0 / 1000);
+    // Window samples, then the points actually drawn: one averaged point
+    // per non-empty bucket of the range's bucket size (see GRAPH_BUCKETS).
+    const windowSamples = (history || []).filter((p) => p && p.T >= t0 / 1000);
+    const bucketSec = GRAPH_BUCKETS[graphRange] || GRAPH_BUCKETS["24h"];
+    const samples = bucketHistorySamples(windowSamples, bucketSec);
     let maxN = 0;
     for (const p of samples) {
         if (p.N > maxN) maxN = p.N;
@@ -559,8 +617,10 @@ function renderHistoryGraph(history) {
         series += '<circle class="graph-dot" cx="' + px + '" cy="' + py + '" r="2.5"/>';
         pts = [[samples[0].T, +px, +py]];
     } else if (samples.length >= 2) {
-        // Smooth line through the samples: one monotone cubic span per
-        // consecutive pair (passes every point, no corners, no overshoot).
+        // Smooth line through the bucket points: one monotone cubic span
+        // per consecutive pair (passes every point, no corners, no
+        // overshoot). Even, uniform span widths keep the curve calm no
+        // matter how densely the raw samples were spaced.
         pts = samples.map((p) => [p.T, sx(p.T * 1000), sy(p.N)]);
         const raw = pts.map((p) => [p[1], p[2]]);
         const d = smoothPathD(raw);
@@ -722,7 +782,7 @@ function showGraphHover(svg, clientX) {
     value.setAttribute("y", bx.vY.toFixed(1));
     time.setAttribute("x", cx);
     time.setAttribute("y", bx.tY.toFixed(1));
-    value.textContent = s.n + " online";
+    value.textContent = graphOnlineLabel(s.n);
     time.textContent = graphHoverTimeLabel(s.t * 1000, GRAPH_RANGES[graphRange] || GRAPH_RANGES["24h"]);
     g.style.display = "";
 }
