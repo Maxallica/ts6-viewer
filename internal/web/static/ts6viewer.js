@@ -530,10 +530,10 @@ function graphNearestIndex(samples, x) {
 }
 
 // Tooltip value line: the drawn points are bucket averages, so the count
-// can be fractional — show up to one decimal without a trailing ".0".
+// can be fractional — but there is no such thing as 0.9 of a person, so
+// the tooltip always shows a whole number (rounded to the nearest one).
 function graphOnlineLabel(n) {
-    const r = Math.round(n * 10) / 10;
-    return (Number.isInteger(r) ? String(r) : r.toFixed(1)) + " online";
+    return Math.round(n) + " online";
 }
 
 // Tooltip time line: clock time for the 24h range (plus the date when the
