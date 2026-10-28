@@ -42,7 +42,10 @@ the **statistics view** (toggle button in the header). With
 the server info instead — the statistics view then only contains the
 activity log, so the graph never appears twice.
 
-- Line + area fill in TeamSpeak blue.
+- Smooth line (monotone cubic, no steps, no overshoot) + area fill in TeamSpeak blue.
+- **Hover tooltip:** moving the mouse over the graph snaps to the nearest
+  sample and shows the exact client count plus its time (clock time for the
+  `24 h` range, date + clock for longer ranges) with a marker and guideline.
 - The y‑axis always uses clean, round ticks (steps of 1/2/5 × 10ⁿ, integer ≥ 1).
 - One sample per data poll (10 s dedupe); older samples are compacted into
   15-minute averages so a month of history stays small.

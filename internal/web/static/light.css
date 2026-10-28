@@ -439,6 +439,38 @@ h1, h2 {
     fill: #0370DB;
 }
 
+/* Hover tooltip: guideline + marker + box with the exact value and time */
+.graph-hover-line {
+    stroke: #bbb;
+    stroke-width: 1;
+    stroke-dasharray: 3 3;
+}
+
+.graph-hover-dot {
+    fill: #0370DB;
+    stroke: #fff;
+    stroke-width: 1.5;
+}
+
+.graph-hover-box {
+    fill: #ffffff;
+    stroke: #ccc;
+    stroke-width: 1;
+}
+
+.graph-hover-value {
+    font-size: 11px;
+    font-weight: 600;
+    font-family: "Roboto", sans-serif;
+    fill: #222;
+}
+
+.graph-hover-time {
+    font-size: 10px;
+    font-family: "Roboto", sans-serif;
+    fill: #666;
+}
+
 /* Single cell: Name Badges | Country (left-packed group), time flush right */
 .stat-grid {
     padding: 8px 2px;
