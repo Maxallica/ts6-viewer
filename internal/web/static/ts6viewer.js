@@ -482,7 +482,10 @@ function niceGraphScale(maxN) {
 // Aggregate the samples of one graph window into fixed time buckets and
 // return the points to draw, oldest first: one point per non-empty
 // bucket, positioned at the bucket's start (an epoch-aligned wall-clock
-// boundary such as 14:15:00) with the bucket's average online count.
+// boundary such as 14:15:00) with the bucket's average online count,
+// rounded to a whole number — there is no such thing as 0.9 of a person,
+// and a whole count keeps the drawn point and the tooltip value
+// consistent (the point lands exactly on its grid line).
 // Empty buckets (no page opened to poll) are dropped entirely, so gaps
 // between the points are visible instead of being filled with "0".
 // With bucketSec <= 0 the samples are returned unchanged.
@@ -504,7 +507,7 @@ function bucketHistorySamples(samples, bucketSec) {
     }
     const pts = [];
     byBucket.forEach((b, key) => {
-        pts.push({ T: key * bucketSec, N: b.sum / b.cnt });
+        pts.push({ T: key * bucketSec, N: Math.round(b.sum / b.cnt) });
     });
     pts.sort((a, b) => a.T - b.T);
     return pts;
