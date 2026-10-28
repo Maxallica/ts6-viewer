@@ -14,11 +14,11 @@ type VMTS6Viewer struct {
 // which sections are enabled, which graph time ranges are available, and
 // whether the Online Clients graph is mirrored onto the main page.
 type VMStats struct {
-	GraphEnabled     bool
-	ActivityEnabled  bool
-	MaxRange         string   // one of "24h" | "7d" | "14d" | "1m"
-	Ranges           []string // enabled ranges, ordered ascending (subset of the above)
-	ShowOnMainPage   bool     // also render the Online Clients graph below the server info
+	GraphEnabled    bool
+	ActivityEnabled bool
+	MaxRange        string   // one of "24h" | "7d" | "14d" | "1m"
+	Ranges          []string // enabled ranges, ordered ascending (subset of the above)
+	ShowOnMainPage  bool     // also render the Online Clients graph below the server info
 }
 
 // VMHistoryPoint is one observation of the rolling online-count graph:
@@ -53,15 +53,19 @@ type VMClient struct {
 
 // VMActivity is one entry of the recent-activity list: the client's latest
 // known state, whether they are online right now, and (if offline) the last
-// time they were confirmed online.
+// time they were confirmed online. The raw unix timestamps (seconds) are the
+// source of truth for the display: the frontend formats them in the viewer's
+// own local timezone (DST included). The pre-formatted strings are a
+// server-side fallback for the no-JavaScript template render.
 type VMActivity struct {
-	Nickname    string
-	Badge       string
-	Country     string
-	ConnectedAt string
-	Online      bool
-	LastSeenAt  int64
-	LastSeen    string
+	Nickname        string
+	Badge           string
+	Country         string
+	ConnectedAt     string
+	ConnectedAtUnix int64 // raw connection start (unix seconds, 0 = unknown)
+	Online          bool
+	LastSeenAt      int64
+	LastSeen        string
 }
 
 type VMChannel struct {

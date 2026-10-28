@@ -262,15 +262,46 @@ function escapeHtml(s) {
         .replace(/'/g, "&#39;");
 }
 
-// Format a unix timestamp as an absolute date + clock time, mirroring the
-// Go MakeDateTime helper: "DD.MM. HH:MM" for the current year,
-// "DD.MM.YYYY HH:MM" for an earlier year. The date is always shown so the
-// merged activity list stays unambiguous.
+// Format a unix timestamp in the VIEWER's own local timezone (the user's
+// time zone, DST included) — never the server's — mirroring the
+// MakeLastSeen contract: "HH:MM" for the current local day,
+// "DD.MM. HH:MM" for an earlier day of the same local year,
+// "DD.MM.YYYY HH:MM" for an earlier year.
+// Returns an empty string for a missing or invalid timestamp.
 function lastSeenTime(unixSeconds) {
-    if (!unixSeconds) {
+    if (!unixSeconds || unixSeconds <= 0) {
         return "";
     }
     const t = new Date(unixSeconds * 1000);
+    if (isNaN(t.getTime())) {
+        return "";
+    }
+    const now = new Date();
+    const clock = String(t.getHours()).padStart(2, "0") + ":" + String(t.getMinutes()).padStart(2, "0");
+    if (t.getFullYear() === now.getFullYear() &&
+        t.getMonth() === now.getMonth() &&
+        t.getDate() === now.getDate()) {
+        return clock;
+    }
+    const day = String(t.getDate()).padStart(2, "0") + "." + String(t.getMonth() + 1).padStart(2, "0") + ".";
+    if (t.getFullYear() === now.getFullYear()) {
+        return day + " " + clock;
+    }
+    return day + t.getFullYear() + " " + clock;
+}
+
+// Format a unix timestamp in the viewer's own local timezone with the date
+// always shown, mirroring the MakeDateTime contract used for "since":
+// "DD.MM. HH:MM" for the current year, "DD.MM.YYYY HH:MM" for an earlier
+// year. Returns an empty string for a missing or invalid timestamp.
+function connectedAtTime(unixSeconds) {
+    if (!unixSeconds || unixSeconds <= 0) {
+        return "";
+    }
+    const t = new Date(unixSeconds * 1000);
+    if (isNaN(t.getTime())) {
+        return "";
+    }
     const now = new Date();
     const clock = String(t.getHours()).padStart(2, "0") + ":" + String(t.getMinutes()).padStart(2, "0");
     const day = String(t.getDate()).padStart(2, "0") + "." + String(t.getMonth() + 1).padStart(2, "0") + ".";
@@ -303,11 +334,15 @@ function renderStatCell(c) {
 
     let timeHtml;
     if (c.Online) {
-        timeHtml = c.ConnectedAt
-            ? '<span class="stat-de online">since <b>' + escapeHtml(c.ConnectedAt) + '</b></span>'
+        // Format the raw timestamp in the viewer's own local timezone
+        // (the user's time, DST included). The pre-formatted Go string is
+        // only a fallback when no unix value is available.
+        const since = connectedAtTime(c.ConnectedAtUnix) || c.ConnectedAt;
+        timeHtml = since
+            ? '<span class="stat-de online">since <b>' + escapeHtml(since) + '</b></span>'
             : "";
     } else {
-        const lastSeen = c.LastSeen || lastSeenTime(c.LastSeenAt);
+        const lastSeen = lastSeenTime(c.LastSeenAt) || c.LastSeen;
         timeHtml = '<span class="stat-de offline">last seen <b>' +
             escapeHtml(lastSeen) + '</b></span>';
     }

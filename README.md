@@ -108,6 +108,16 @@ Docker environment variables (same defaults): `STATS_GRAPH`,
 `STATS_GRAPH_MAX_RANGE`, `STATS_SHOW_ON_MAIN_PAGE`, `STATS_RECENT_ACTIVITY`,
 `STATS_RECENT_ACTIVITY_LIMIT`.
 
+Timestamps in the Recent Activity log are displayed in the **viewer's own
+time zone**: the raw unix timestamps are stored and sent as absolute
+seconds, and the browser formats them client-side — so a viewer in Berlin
+sees Berlin time and a viewer in New York sees New York time (daylight
+saving included) no matter where the server runs. The server's time zone
+(`TZ`, neutral `UTC` by default in the Docker image) only affects the
+pre-formatted fallback strings used when JavaScript is disabled and the
+log output; set it per deployment if wanted, e.g. `TZ=Europe/Berlin` or
+`TZ=America/New_York`.
+
 With **both** sections disabled the statistics toggle button disappears as
 well — the viewer is then purely the channel tree.
 

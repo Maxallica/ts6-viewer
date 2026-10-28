@@ -190,19 +190,22 @@ func updateActivity(clients []ts6.Client, groupBadges map[string]string, now int
 	result := make([]*view.VMActivity, 0, len(entries))
 	for _, e := range entries {
 		connectedAt := e.connectedAt
+		connectedAtUnix := e.connectedAtUnix
 		// Online entry without a known connection time: fall back to the
 		// last confirmed-online time so the row still carries a timestamp.
 		if e.offlineAt == 0 && connectedAt == "" && e.onlineAt > 0 {
 			connectedAt = view.MakeDateTime(e.onlineAt)
+			connectedAtUnix = e.onlineAt
 		}
 		result = append(result, &view.VMActivity{
-			Nickname:    e.nickname,
-			Badge:       e.badge,
-			Country:     e.country,
-			ConnectedAt: connectedAt,
-			Online:      e.offlineAt == 0,
-			LastSeenAt:  e.onlineAt,
-			LastSeen:    view.MakeLastSeen(e.onlineAt),
+			Nickname:        e.nickname,
+			Badge:           e.badge,
+			Country:         e.country,
+			ConnectedAt:     connectedAt,
+			ConnectedAtUnix: connectedAtUnix,
+			Online:          e.offlineAt == 0,
+			LastSeenAt:      e.onlineAt,
+			LastSeen:        view.MakeLastSeen(e.onlineAt),
 		})
 	}
 

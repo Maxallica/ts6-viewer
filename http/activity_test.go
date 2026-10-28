@@ -16,9 +16,9 @@ func activityClient(nickname, uid string) ts6.Client {
 
 func activityClientAt(nickname, uid string, connectedAtUnix int64) ts6.Client {
 	return ts6.Client{
-		Nickname:       nickname,
+		Nickname:         nickname,
 		UniqueIdentifier: uid,
-		ConnectionTime: fmt.Sprint(connectedAtUnix),
+		ConnectionTime:   fmt.Sprint(connectedAtUnix),
 	}
 }
 
@@ -52,6 +52,11 @@ func TestUpdateActivityOnlineDescending(t *testing.T) {
 	result := updateActivity(clients, nil, now)
 
 	want := []string{"Late", "Mid", "Early"} // most recent connection first
+	wantUnix := map[string]int64{
+		"Late":  now - 60,
+		"Mid":   now - 1800,
+		"Early": now - 7200,
+	}
 	if len(result) != len(want) {
 		t.Fatalf("got %d entries, want %d: %+v", len(result), len(want), result)
 	}
@@ -65,6 +70,11 @@ func TestUpdateActivityOnlineDescending(t *testing.T) {
 		// Online entries must carry an absolute date + clock time.
 		if result[i].ConnectedAt == "" || strings.Contains(result[i].ConnectedAt, ":") == false {
 			t.Errorf("position %d: expected absolute date+time, got %q", i, result[i].ConnectedAt)
+		}
+		// The raw unix connection time must be present so the frontend can
+		// format it in the viewer's own local timezone.
+		if result[i].ConnectedAtUnix != wantUnix[w] {
+			t.Errorf("position %d: ConnectedAtUnix = %d, want %d", i, result[i].ConnectedAtUnix, wantUnix[w])
 		}
 	}
 }
@@ -132,6 +142,12 @@ func TestUpdateActivityOrderAndAbsoluteTime(t *testing.T) {
 		if strings.Contains(result[i].LastSeen, "ago") || strings.Contains(result[i].LastSeen, "just now") {
 			t.Errorf("position %d: LastSeen %q must be absolute, not relative", i, result[i].LastSeen)
 		}
+		// Raw timestamps for the frontend: every client in this test was
+		// observed live with ConnectionTime 1700000000, so online rows
+		// carry it — and offline rows keep the last session's value.
+		if result[i].ConnectedAtUnix != 1700000000 {
+			t.Errorf("position %d: ConnectedAtUnix = %d, want 1700000000", i, result[i].ConnectedAtUnix)
+		}
 	}
 
 	// Offline last-seen values must come from the last online observation.
@@ -157,8 +173,8 @@ func TestUpdateActivityRejoin(t *testing.T) {
 
 	solo := []ts6.Client{activityClient("Mia", "uid-mia")}
 
-	updateActivity(solo, nil, t0) // Mia online
-	updateActivity(nil, nil, t1)  // Mia offline (first missing observation)
+	updateActivity(solo, nil, t0)            // Mia online
+	updateActivity(nil, nil, t1)             // Mia offline (first missing observation)
 	result := updateActivity(solo, nil, now) // Mia back online
 
 	if len(result) != 1 {
@@ -234,6 +250,42 @@ func TestMergeClientDBBriefVisit(t *testing.T) {
 	if row.LastSeen != view.MakeLastSeen(lastSeen) {
 		t.Errorf("LastSeen = %q, want %q", row.LastSeen, view.MakeLastSeen(lastSeen))
 	}
+	// The client database does not carry a connection time.
+	if row.ConnectedAtUnix != 0 {
+		t.Errorf("ConnectedAtUnix = %d, want 0 (unknown from client database)", row.ConnectedAtUnix)
+	}
+	// The raw last-seen unix seconds are the source of truth for the
+	// viewer-local display in the frontend.
+	if row.LastSeenAt != lastSeen {
+		t.Errorf("LastSeenAt = %d, want %d (raw unix seconds)", row.LastSeenAt, lastSeen)
+	}
+}
+
+// TestUpdateActivityOnlineWithoutConnectionTime covers the fallback for an
+// online entry whose connection time is unknown: the row must still carry a
+// raw timestamp (the last confirmed-online time) so the frontend can
+// display a viewer-local "since" value.
+func TestUpdateActivityOnlineWithoutConnectionTime(t *testing.T) {
+	saved := activityLog
+	activityLog = make(map[string]*activityEntry)
+	defer func() { activityLog = saved }()
+
+	now := time.Now().Unix()
+	anon := ts6.Client{Nickname: "Anon", UniqueIdentifier: "uid-anon"} // no ConnectionTime
+
+	result := updateActivity([]ts6.Client{anon}, nil, now)
+	if len(result) != 1 {
+		t.Fatalf("got %d entries, want 1: %+v", len(result), result)
+	}
+	if !result[0].Online {
+		t.Errorf("Anon must be online, got %+v", result[0])
+	}
+	if result[0].ConnectedAt == "" {
+		t.Error("ConnectedAt must fall back to the last confirmed-online time")
+	}
+	if result[0].ConnectedAtUnix != now {
+		t.Errorf("ConnectedAtUnix = %d, want %d (fallback to onlineAt)", result[0].ConnectedAtUnix, now)
+	}
 }
 
 // TestMergeClientDBKeepsLiveEntry verifies that a client currently online
@@ -298,7 +350,7 @@ func TestMergeClientDBNewerSession(t *testing.T) {
 	}
 
 	updateActivity([]ts6.Client{bob}, groupBadges, t1) // Bob online at t1
-	updateActivity(nil, nil, t1+1)                      // Bob offline, first missing observation
+	updateActivity(nil, nil, t1+1)                     // Bob offline, first missing observation
 
 	mergeClientDB([]ts6.ClientDB{
 		clientDBEntry("uid-bob", "Bob", "Bob", "de", t2), // another visit after t1
