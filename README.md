@@ -233,6 +233,25 @@ image: maxallica/ts6-viewer:latest
 You can find the prebuilt Docker image here
 [![Docker Pulls](https://img.shields.io/docker/pulls/maxallica/ts6-viewer.svg?logo=docker&label=pulls)](https://hub.docker.com/r/maxallica/ts6-viewer)
 
+### Image Tags
+
+Every commit on `main` is pushed to Docker Hub with two tags:
+
+| Tag | Meaning |
+| --- | --- |
+| `maxallica/ts6-viewer:latest` | Always the newest build (the last commit on `main`) |
+| `maxallica/ts6-viewer:<short commit sha>` | One fixed tag per commit, e.g. `maxallica/ts6-viewer:c870aae` |
+
+Pin a commit to make updates explicit instead of automatic:
+
+```sh
+docker pull maxallica/ts6-viewer:c870aae
+docker run --rm -d --name ts6viewer -p 9000:8080 maxallica/ts6-viewer:c870aae
+```
+
+The short commit SHA is the first 7 characters of the commit hash shown on the
+[GitHub commit list](https://github.com/Maxallica/ts6-viewer/commits/main).
+
 ---
 
 

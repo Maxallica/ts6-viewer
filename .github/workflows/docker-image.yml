@@ -30,11 +30,23 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Step 4: Build the Docker image and push it to Docker Hub
-      # The image will be tagged as: <dockerhub-username>/ts6-viewer:latest
+      # Step 4: Compute the image tags
+      # - <dockerhub-username>/ts6-viewer:latest  -> always the newest build
+      # - <dockerhub-username>/ts6-viewer:<short commit sha> -> one tag per commit
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/ts6-viewer
+          tags: |
+            type=raw,value=latest
+            type=sha
+
+      # Step 5: Build the Docker image and push it to Docker Hub with all computed tags
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/ts6-viewer:latest
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
