@@ -11,6 +11,12 @@ import (
 // activityWindow is how long recent-activity entries are kept.
 const activityWindow = 24 * time.Hour
 
+// clientdbCutoffUnix returns the oldest last-seen timestamp still worth
+// recording, in unix seconds.
+func clientdbCutoffUnix(now int64) int64 {
+	return now - int64(activityWindow.Seconds())
+}
+
 // activityEntry is the latest known state of a client, keyed by UID.
 type activityEntry struct {
 	nickname        string
@@ -47,6 +53,62 @@ func (e *activityEntry) eventTime() int64 {
 		return e.connectedAtUnix
 	}
 	return e.onlineAt
+}
+
+// mergeClientDB folds the server's client database into the rolling log.
+// It is the safety net for brief connections: a client that joins and
+// leaves between two polls of the live client list never appears in the
+// online list at all, but the server database records when it last
+// disconnected. Entries inside the activity window are added (or updated,
+// if the client came and went again after we last saw it); clients that
+// are currently online keep their live entry, which carries the richer
+// badge and connection-time data.
+func mergeClientDB(entries []ts6.ClientDB, now int64) {
+	cutoff := clientdbCutoffUnix(now)
+
+	for _, e := range entries {
+		if e.LastSeenUnix < cutoff {
+			continue
+		}
+
+		existing, ok := activityLog[e.UID]
+		if ok && existing.offlineAt == 0 {
+			// Currently online: the live entry wins.
+			continue
+		}
+		if ok && e.LastSeenUnix <= existing.eventTime() {
+			// Already recorded a newer (or identical) event.
+			continue
+		}
+
+		nickname := e.LastNickname
+		if nickname == "" {
+			nickname = e.Nickname
+		}
+		country := view.FlagEmoji(e.Country)
+
+		if ok {
+			// Same client came and went again after we last saw it.
+			// Keep the badge if one was learned from a live observation.
+			existing.nickname = nickname
+			existing.country = country
+			existing.connectedAt = "" // unknown from the client database
+			existing.connectedAtUnix = 0
+			existing.onlineAt = e.LastSeenUnix
+			existing.offlineAt = e.LastSeenUnix
+			continue
+		}
+
+		activityLog[e.UID] = &activityEntry{
+			nickname:        nickname,
+			badge:           "",
+			country:         country,
+			connectedAt:     "",
+			connectedAtUnix: 0,
+			onlineAt:        e.LastSeenUnix,
+			offlineAt:       e.LastSeenUnix,
+		}
+	}
 }
 
 // updateActivity reconciles the rolling log with the currently online clients

@@ -72,6 +72,12 @@ it is not displayed on the main page (the toggle switches back). The log is
   (same year: `DD.MM.YYYY HH:MM`). Never relative ("just now", "2 h ago").
 - **Badges** (ADMIN / VIP, derived from server group names, admin wins) and
   **country flags** on every row.
+- **Brief connections are tracked too**: clients that join and leave between
+  two polls never appear in the live client list, so the log is supplemented
+  with the server's client database (`clientdb`), which records when every
+  client last disconnected. Such rows show `last seen` with the recorded time
+  (no badge, since groups are only known for live clients). If the query
+  client lacks `clientdb` permission, tracking degrades to the live list only.
 - Limited to the last **10 entries by default** (`recent_activity_limit`,
   `0` = unlimited).
 

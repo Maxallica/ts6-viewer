@@ -62,6 +62,19 @@ func getViewerData(cfg *config.Config, force bool) (view.VMTS6Viewer, error) {
 		return view.VMTS6Viewer{}, err
 	}
 
+	// The server's client database also covers clients that were only
+	// briefly online between polls (they never show up in the live list).
+	// Fetched only while the activity log is on; a failure here degrades
+	// to the old behaviour instead of breaking the viewer.
+	var clientDB []ts6.ClientDB
+	if statsActivityEnabled {
+		clientDB, err = ts6.GetClientDB(cfg, sshClient)
+		if err != nil {
+			log.Printf("[HTTP] Failed to get client database (brief connections not tracked): %v\n", err)
+			clientDB = nil
+		}
+	}
+
 	groups, err := ts6.GetServerGroups(cfg, sshClient)
 	if err != nil {
 		log.Printf("[HTTP] Failed to get servergroups: %v\n", err)
@@ -83,6 +96,11 @@ func getViewerData(cfg *config.Config, force bool) (view.VMTS6Viewer, error) {
 
 	now := time.Now().Unix()
 	sampleHistory(len(clients), now)
+
+	// Fold the client database in before the log is reconciled and
+	// rendered, so brief connections that the live list never saw are
+	// recorded as offline entries with the server's last-seen time.
+	mergeClientDB(clientDB, now)
 
 	vmTS6Viewer := view.VMTS6Viewer{
 		VMServer:        view.BuildVMServer(cfg, info, clients),

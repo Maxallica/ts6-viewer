@@ -192,3 +192,164 @@ func TestUpdateActivityOfflineTieBreak(t *testing.T) {
 		t.Fatalf("unexpected tie-break order: %+v", result)
 	}
 }
+
+func clientDBEntry(uid, nickname, lastNickname, country string, lastSeenUnix int64) ts6.ClientDB {
+	return ts6.ClientDB{
+		UID:          uid,
+		Nickname:     nickname,
+		LastNickname: lastNickname,
+		Country:      country,
+		LastSeenUnix: lastSeenUnix,
+	}
+}
+
+// TestMergeClientDBBriefVisit covers the regression where a one-second
+// connection between two polls vanished from the Recent Activity log: the
+// client never appears in the live client list, but the server's client
+// database records its last disconnect, so the visit must still show up.
+func TestMergeClientDBBriefVisit(t *testing.T) {
+	saved := activityLog
+	activityLog = make(map[string]*activityEntry)
+	defer func() { activityLog = saved }()
+
+	now := time.Now().Unix()
+	lastSeen := now - 10 // connected and left 10 seconds ago
+
+	// Production order: merge the client database first, then reconcile.
+	mergeClientDB([]ts6.ClientDB{
+		clientDBEntry("uid-flash", "Flash", "Flash", "de", lastSeen),
+	}, now)
+	result := updateActivity(nil, nil, now) // nobody online in the live list
+
+	if len(result) != 1 {
+		t.Fatalf("got %d entries, want 1: %+v", len(result), result)
+	}
+	row := result[0]
+	if row.Nickname != "Flash" {
+		t.Errorf("nickname = %q, want %q", row.Nickname, "Flash")
+	}
+	if row.Online {
+		t.Errorf("brief visitor must be listed as offline")
+	}
+	if row.LastSeen != view.MakeLastSeen(lastSeen) {
+		t.Errorf("LastSeen = %q, want %q", row.LastSeen, view.MakeLastSeen(lastSeen))
+	}
+}
+
+// TestMergeClientDBKeepsLiveEntry verifies that a client currently online
+// keeps its richer live entry (badge, connection time) instead of being
+// overwritten by the stale client-database record of its previous session.
+func TestMergeClientDBKeepsLiveEntry(t *testing.T) {
+	saved := activityLog
+	activityLog = make(map[string]*activityEntry)
+	defer func() { activityLog = saved }()
+
+	now := time.Now().Unix()
+	t0 := now - 3600
+	t1 := now - 60
+
+	groupBadges := map[string]string{"5": "admin"}
+	alice := ts6.Client{
+		Nickname:         "Alice",
+		UniqueIdentifier: "uid-alice",
+		ConnectionTime:   fmt.Sprint(t0),
+		ServerGroups:     "5",
+	}
+
+	updateActivity([]ts6.Client{alice}, groupBadges, t1) // Alice online, badge admin
+	mergeClientDB([]ts6.ClientDB{
+		clientDBEntry("uid-alice", "Alice", "Alice", "de", t0-86400), // last_seen from an older session
+	}, now)
+
+	e := activityLog["uid-alice"]
+	if e == nil {
+		t.Fatal("uid-alice entry missing")
+	}
+	if e.offlineAt != 0 {
+		t.Errorf("live entry must stay online, got offlineAt %d", e.offlineAt)
+	}
+	if e.badge != "admin" {
+		t.Errorf("badge = %q, want %q", e.badge, "admin")
+	}
+	if e.connectedAtUnix != t0 {
+		t.Errorf("connectedAtUnix = %d, want %d", e.connectedAtUnix, t0)
+	}
+}
+
+// TestMergeClientDBNewerSession covers a client that came and went again
+// after we last saw it: the client-database last_seen is newer than the
+// recorded event, so the entry must move to the new time — and keep the
+// badge learned from the earlier live observation.
+func TestMergeClientDBNewerSession(t *testing.T) {
+	saved := activityLog
+	activityLog = make(map[string]*activityEntry)
+	defer func() { activityLog = saved }()
+
+	now := time.Now().Unix()
+	t1 := now - 3600
+	t2 := now - 30
+
+	groupBadges := map[string]string{"5": "vip"}
+	bob := ts6.Client{
+		Nickname:         "Bob",
+		UniqueIdentifier: "uid-bob",
+		ConnectionTime:   fmt.Sprint(t1 - 60),
+		ServerGroups:     "5",
+	}
+
+	updateActivity([]ts6.Client{bob}, groupBadges, t1) // Bob online at t1
+	updateActivity(nil, nil, t1+1)                      // Bob offline, first missing observation
+
+	mergeClientDB([]ts6.ClientDB{
+		clientDBEntry("uid-bob", "Bob", "Bob", "de", t2), // another visit after t1
+	}, now)
+
+	result := updateActivity(nil, nil, now)
+	if len(result) != 1 {
+		t.Fatalf("got %d entries, want 1: %+v", len(result), result)
+	}
+	row := result[0]
+	if row.Online {
+		t.Errorf("Bob must be listed as offline")
+	}
+	if row.LastSeen != view.MakeLastSeen(t2) {
+		t.Errorf("LastSeen = %q, want %q", row.LastSeen, view.MakeLastSeen(t2))
+	}
+	if got := activityLog["uid-bob"].badge; got != "vip" {
+		t.Errorf("badge = %q, want %q (must survive the update)", got, "vip")
+	}
+}
+
+// TestMergeClientDBWindow ensures client-database records older than the
+// activity window are ignored, and that an older record never moves an
+// existing entry backwards.
+func TestMergeClientDBWindow(t *testing.T) {
+	saved := activityLog
+	activityLog = make(map[string]*activityEntry)
+	defer func() { activityLog = saved }()
+
+	now := time.Now().Unix()
+	old := now - 48*3600 // outside the 24h window
+
+	mergeClientDB([]ts6.ClientDB{
+		clientDBEntry("uid-old", "Old", "Old", "de", old),
+	}, now)
+
+	if _, ok := activityLog["uid-old"]; ok {
+		t.Errorf("stale client-database record must not be added")
+	}
+
+	// An existing offline entry must not be pushed backwards.
+	activityLog["uid-bob"] = &activityEntry{
+		nickname:  "Bob",
+		onlineAt:  now - 3600,
+		offlineAt: now - 3600,
+	}
+	mergeClientDB([]ts6.ClientDB{
+		clientDBEntry("uid-bob", "Bob", "Bob", "de", now-7200), // older than recorded
+	}, now)
+
+	if got := activityLog["uid-bob"].offlineAt; got != now-3600 {
+		t.Errorf("offlineAt = %d, want %d (no backward move)", got, now-3600)
+	}
+}
