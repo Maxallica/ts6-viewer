@@ -14,7 +14,7 @@ var historyWindow = 31 * 24 * time.Hour
 const historyFineWindow = 24 * time.Hour
 
 // historyBucketSize: how finely samples older than historyFineWindow are
-// aggregated (average online count per bucket). 15 minutes keeps even a
+// aggregated (peak online count per bucket). 15 minutes keeps even a
 // month of history small (about 2900 buckets) while the 24h view stays
 // sample-exact.
 const historyBucketSize = 15 * time.Minute
@@ -27,7 +27,7 @@ const historyBucketSize = 15 * time.Minute
 const historySampleGap = 10 * time.Second
 
 // historySample is one observation of the online client count. For samples
-// older than historyFineWindow, t is the bucket start and n the average
+// older than historyFineWindow, t is the bucket start and n the peak
 // online count inside that bucket.
 type historySample struct {
 	t int64 // unix seconds
@@ -62,8 +62,10 @@ func sampleHistory(onlineCount int, now int64) {
 }
 
 // compactHistory aggregates samples older than historyFineWindow into
-// historyBucketSize buckets (average online count per bucket) so long
+// historyBucketSize buckets (peak online count per bucket) so long
 // retention (7d/14d/1m) does not bloat state.json or the poll payload.
+// The peak — not an average — is kept so a brief visit stays visible in
+// the long-range views, consistent with the client-side bucket rendering.
 func compactHistory(now int64) {
 	bucketStart := now - int64(historyFineWindow/time.Second)
 	bucketSecs := int64(historyBucketSize / time.Second)
@@ -79,13 +81,14 @@ func compactHistory(now int64) {
 	var compacted []historySample
 	for j := 0; j < i; {
 		bucket := onlineHistory[j].t / bucketSecs * bucketSecs
-		sum, cnt := 0, 0
+		peak := 0
 		for j < i && onlineHistory[j].t/bucketSecs*bucketSecs == bucket {
-			sum += onlineHistory[j].n
-			cnt++
+			if onlineHistory[j].n > peak {
+				peak = onlineHistory[j].n
+			}
 			j++
 		}
-		compacted = append(compacted, historySample{t: bucket, n: sum / cnt})
+		compacted = append(compacted, historySample{t: bucket, n: peak})
 	}
 
 	onlineHistory = append(compacted, onlineHistory[i:]...)

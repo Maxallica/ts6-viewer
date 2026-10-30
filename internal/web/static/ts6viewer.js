@@ -384,16 +384,24 @@ const GRAPH_RANGES = {
     "1m": 31 * 24 * 3600 * 1000,
 };
 // Bucket size (seconds, matching the unix-seconds timestamps of the
-// history payload) per range. Before drawing, the raw samples are
-// aggregated into fixed wall-clock buckets (average online count per
-// bucket) so the shape of the line no longer depends on how often the
-// page happened to be polled: the 0/1 oscillation of quiet hours
-// averages out, and fast evening jumps are spread over their bucket
-// instead of drawing as near-vertical steps. Buckets are anchored at
-// epoch boundaries, so a sample always lands in the same bucket no
-// matter when the graph is rendered.
+// history payload) per range. 0 means "no bucketing — draw the raw
+// samples at their exact times".
+//
+// The 24h (recent) view uses NO bucketing: the statistics are captured
+// in real time (every join and leave is folded in the moment it happens,
+// plus a 30s sampler), so the samples are already time-accurate. Drawing
+// them raw means a brief visit shows as a spike at its exact moment AND
+// a departure drops the line back immediately — a coarse 15-minute
+// bucket would hold the peak and keep the line "online" for up to 15
+// minutes after the client left.
+//
+// The long ranges (7d/14d/1m) aggregate into fixed wall-clock buckets
+// carrying the PEAK online count (max per bucket), so a month of
+// history stays small while a brief visit is still visible as the bucket
+// peak. Buckets are anchored at epoch boundaries, so a sample always
+// lands in the same bucket no matter when the graph is rendered.
 const GRAPH_BUCKETS = {
-    "24h": 15 * 60,
+    "24h": 0,
     "7d": 3600,
     "14d": 2 * 3600,
     "1m": 8 * 3600,
@@ -464,10 +472,13 @@ function niceGraphScale(maxN) {
 // Aggregate the samples of one graph window into fixed time buckets and
 // return the points to draw, oldest first: one point per non-empty
 // bucket, positioned at the bucket's start (an epoch-aligned wall-clock
-// boundary such as 14:15:00) with the bucket's average online count,
-// rounded to a whole number — there is no such thing as 0.9 of a person,
-// and a whole count keeps the drawn point and the tooltip value
-// consistent (the point lands exactly on its grid line).
+// boundary such as 14:15:00) with the bucket's PEAK online count (max
+// over its samples). The peak — not an average — is the meaningful
+// statistic for "who was online": a client online for only a few seconds
+// really was online, so the bucket must reach that count instead of
+// diluting the spike into the surrounding samples. The result is always
+// a whole count (a max of whole counts), so the drawn point and the
+// tooltip value are consistent and land exactly on their grid line.
 // Empty buckets (no page opened to poll) are dropped entirely, so gaps
 // between the points are visible instead of being filled with "0".
 // With bucketSec <= 0 the samples are returned unchanged.
@@ -481,15 +492,16 @@ function bucketHistorySamples(samples, bucketSec) {
         const key = Math.floor(s.T / bucketSec);
         const b = byBucket.get(key);
         if (b) {
-            b.sum += s.N;
-            b.cnt += 1;
+            if (s.N > b.max) {
+                b.max = s.N;
+            }
         } else {
-            byBucket.set(key, { sum: s.N, cnt: 1 });
+            byBucket.set(key, { max: s.N });
         }
     }
     const pts = [];
     byBucket.forEach((b, key) => {
-        pts.push({ T: key * bucketSec, N: Math.round(b.sum / b.cnt) });
+        pts.push({ T: key * bucketSec, N: b.max });
     });
     pts.sort((a, b) => a.T - b.T);
     return pts;
@@ -514,9 +526,9 @@ function graphNearestIndex(samples, x) {
     return best;
 }
 
-// Tooltip value line: the drawn points are bucket averages, so the count
-// can be fractional — but there is no such thing as 0.9 of a person, so
-// the tooltip always shows a whole number (rounded to the nearest one).
+// Tooltip value line: the drawn points are bucket peaks — already whole
+// counts — but there is no such thing as 0.9 of a person, so the tooltip
+// always shows a whole number (rounding stays as a defensive no-op).
 function graphOnlineLabel(n) {
     return Math.round(n) + " online";
 }
@@ -560,7 +572,7 @@ function renderHistoryGraph(history) {
     const now = Date.now();
     const t0 = now - rangeMs;
 
-    // Window samples, then the points actually drawn: one averaged point
+    // Window samples, then the points actually drawn: one peak point
     // per non-empty bucket of the range's bucket size (see GRAPH_BUCKETS).
     const windowSamples = (history || []).filter((p) => p && p.T >= t0 / 1000);
     const bucketSec = GRAPH_BUCKETS[graphRange] || GRAPH_BUCKETS["24h"];

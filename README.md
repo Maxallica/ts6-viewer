@@ -57,8 +57,12 @@ when event notifications are unavailable), so the statistics stay current
   `24 h` range, date + clock for longer ranges) with a marker and guideline.
 - The y‑axis always uses clean, round ticks (steps of 1/2/5 × 10ⁿ, integer ≥ 1).
 - One sample per observation (each real‑time join/leave event, each 30 s
-  sampler tick, and each viewer data fetch; 10 s dedupe); older samples
-  are compacted into 15-minute averages so a month of history stays small.
+  sampler tick, and each viewer data fetch; 10 s dedupe); for drawing,
+  samples are grouped into fixed buckets per range (24 h → 15 min,
+  7 d → 1 h, …) and each bucket carries the **peak** online count of its
+  window — so a visit of only a few seconds still shows as a visible
+  spike, and a month of history stays small (older samples are compacted
+  into the same 15‑minute peaks in storage).
 - **Range buttons** in the panel header: `24 h`, `7 d`, `14 d`, `1 m` — all
   available by default. The choice is remembered per browser (localStorage).
 - The largest range is limited by the `graph_max_range` config value: smaller
