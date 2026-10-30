@@ -68,6 +68,23 @@ func NewRouter(cfg config.Config) http.Handler {
 	// history) before the first request is served. Missing file = first start.
 	loadState()
 
+	// Wire real-time ServerQuery event capture: a client enter/leave is
+	// folded into the statistics immediately (sub-millisecond reaction,
+	// instead of waiting up to 30 s for the next sampler tick). Started
+	// after loadState and before the sampler so the event subscription is
+	// live from the first second. If the SSH connection is unavailable it
+	// degrades gracefully and the sampler below stays the capture path.
+	StartEventStatistics(&cfg)
+
+	// Start the background statistics sampler: it records + persists the
+	// online-count graph and the recent-activity log on a fixed interval,
+	// independently of viewer requests. It is the safety net for real-time
+	// event capture (and the only capture path when events are unavailable):
+	// a brief session always lands in the statistics via this tick or the
+	// client-database safety net. Started after loadState so the restored
+	// state is what the first tick builds on.
+	StartStatisticsSampler(&cfg)
+
 	mux := http.NewServeMux()
 
 	// Load templates

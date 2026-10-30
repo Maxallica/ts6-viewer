@@ -25,7 +25,7 @@ The viewer is designed to be:
 - Dark and light themes (each web user selects their own via the theme button, with system default)
 - Channel tree rendering with clients  
 - Spacer and full‑width channel support  
-- **Statistics view** (toggle button in the header) with the **Online Clients graph** (TeamSpeak blue line + area, **24 h / 7 d / 14 d / 1 m** range buttons) and a **Recent Activity** log — the graph can instead be displayed on the main page below the server info (it is then never shown twice)
+- **Statistics view** (toggle button in the header) with the **Online Clients graph** (TeamSpeak blue line + area, **24 h / 7 d / 14 d / 1 m** range buttons) and a **Recent Activity** log, updated in **real time** from TeamSpeak server events (client join/leave) with a 30 s background poll as a safety net (both work even without an open viewer) — the graph can instead be displayed on the main page below the server info (it is then never shown twice)
 - **Badges** (ADMIN / VIP from server group names) and **country flags** on client rows
 - Caching + rate‑limit protection  
 - Pure **ServerQuery (SSH)** backend  
@@ -42,13 +42,23 @@ the **statistics view** (toggle button in the header). With
 the server info instead — the statistics view then only contains the
 activity log, so the graph never appears twice.
 
+The graph and the Recent Activity log are fed in **real time** by
+**ServerQuery event notifications** over the persistent SSH connection:
+every client **join and leave** is folded into the statistics
+immediately, so a visitor online for only a few seconds is captured right
+away — without anyone having to watch the page. A **background sampler**
+polls the server every **30 s** as a safety net (and is the capture path
+when event notifications are unavailable), so the statistics stay current
+**even when nobody has the viewer open**.
+
 - Straight line (one segment between consecutive points, no smoothing) + area fill in TeamSpeak blue.
 - **Hover tooltip:** moving the mouse over the graph snaps to the nearest
   sample and shows the exact client count plus its time (clock time for the
   `24 h` range, date + clock for longer ranges) with a marker and guideline.
 - The y‑axis always uses clean, round ticks (steps of 1/2/5 × 10ⁿ, integer ≥ 1).
-- One sample per data poll (10 s dedupe); older samples are compacted into
-  15-minute averages so a month of history stays small.
+- One sample per observation (each real‑time join/leave event, each 30 s
+  sampler tick, and each viewer data fetch; 10 s dedupe); older samples
+  are compacted into 15-minute averages so a month of history stays small.
 - **Range buttons** in the panel header: `24 h`, `7 d`, `14 d`, `1 m` — all
   available by default. The choice is remembered per browser (localStorage).
 - The largest range is limited by the `graph_max_range` config value: smaller
@@ -72,12 +82,16 @@ it is not displayed on the main page (the toggle switches back). The log is
   (same year: `DD.MM.YYYY HH:MM`). Never relative ("just now", "2 h ago").
 - **Badges** (ADMIN / VIP, derived from server group names, admin wins) and
   **country flags** on every row.
-- **Brief connections are tracked too**: clients that join and leave between
-  two polls never appear in the live client list, so the log is supplemented
-  with the server's client database (`clientdb`), which records when every
-  client last disconnected. Such rows show `last seen` with the recorded time
-  (no badge, since groups are only known for live clients). If the query
-  client lacks `clientdb` permission, tracking degrades to the live list only.
+- **Brief connections are tracked too**: clients that join and leave
+  between two polls never appear in the live client list, so the log is
+  supplemented with the server's client database (`clientdb`), which
+  records when every client last disconnected. Such rows show `last seen`
+  with the recorded time (no badge, since groups are only known for live
+  clients). If the query client lacks `clientdb` permission, tracking
+  degrades to the live list only. Because joins and leaves are captured
+  **in real time** via server events (the 30 s sampler remains as a
+  safety net), even a few-second session is recorded — without anyone
+  watching the page.
 - Limited to the last **10 entries by default** (`recent_activity_limit`,
   `0` = unlimited).
 - **Range selection like the graph** (`recent_activity_max_range`): the
@@ -132,9 +146,10 @@ well — the viewer is then purely the channel tree.
 ### Persistence
 
 The full statistics state (recent-activity log + graph history) is written to
-`state.json` next to `config.json` after every data fetch (atomic write,
-stale entries pruned) and reloaded at startup — so **a server restart does
-not reset the log or the graph**; it continues from the last saved state.
+`state.json` next to `config.json` after **every observation** (each real‑time
+server event, each 30 s sampler tick, and each viewer data fetch — atomic
+write, stale entries pruned) and reloaded at startup — so **a server restart
+does not reset the log or the graph**; it continues from the last saved state.
 The location can be overridden with the `STATE_FILE` environment variable.
 In Docker, `compose.yml` already sets `STATE_FILE=/data/state.json` and
 mounts a named volume at `/data`, so the state also survives container
@@ -154,7 +169,12 @@ update.
 TS6 Viewer communicates exclusively via ServerQuery over SSH.
 
 Advantages:
-- Persistent SSH connection
+- Persistent SSH connection, kept alive by periodic keepalive commands so the
+  server never drops the idle session
+- **Real‑time statistics:** the connection subscribes to ServerQuery event
+  notifications (`servernotifyregister event=server`), so every client
+  join/leave is captured the moment it happens — a single always-on reader
+  demultiplexes command responses and event notifications on the same stream
 - Very fast, even with many clients
 - clientlist -voice provides all audio/mute/talker info in a single call
 - No REST overhead

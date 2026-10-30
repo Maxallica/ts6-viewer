@@ -20,7 +20,10 @@ const historyFineWindow = 24 * time.Hour
 const historyBucketSize = 15 * time.Minute
 
 // historySampleGap deduplicates samples from the same refresh burst (two
-// tabs polling within seconds must not create two identical points).
+// tabs polling within seconds must not create two identical points). It only
+// suppresses a *repeat* of the current count; a changed count always appends
+// a fresh point, so a brief spike is never lost and the previous value is
+// never overwritten at an old timestamp.
 const historySampleGap = 10 * time.Second
 
 // historySample is one observation of the online client count. For samples
@@ -32,19 +35,23 @@ type historySample struct {
 }
 
 // onlineHistory is the rolling online-count series, oldest first.
-// Guarded by mu: getViewerData holds it for the whole fetch, and
-// sampleHistory/onlineHistoryFor are only ever called from that path.
+// Guarded by mu: both the viewer path (getViewerData) and the background
+// sampler (recordStatistics) hold it for the whole observation, so
+// sampleHistory/onlineHistoryFor never run concurrently with each other.
 var onlineHistory []historySample
 
 // sampleHistory records the current online count once per data fetch and
-// compacts + prunes the series against the configured window.
+// compacts + prunes the series against the configured window. A changed
+// count always appends a new point at the current time, so a brief spike is
+// captured at the right moment and the previous value is never destroyed.
+// A repeat of the current count inside the sample gap is dropped (two tabs
+// polling within seconds must not create two identical points); a repeat
+// outside the gap is kept, so the line still has a point at that time.
 func sampleHistory(onlineCount int, now int64) {
 	if len(onlineHistory) > 0 {
 		last := onlineHistory[len(onlineHistory)-1]
-		if now-last.t < int64(historySampleGap/time.Second) {
-			// Same observation burst: refresh the last point instead of
-			// appending a duplicate.
-			onlineHistory[len(onlineHistory)-1].n = onlineCount
+		if now-last.t < int64(historySampleGap/time.Second) && last.n == onlineCount {
+			// Same observation burst with the same count: drop the repeat.
 			return
 		}
 	}

@@ -8,7 +8,7 @@ import (
 	"ts6-viewer/internal/config"
 )
 
-// ClientDB is one entry from the server's client database (clientdb list).
+// ClientDB is one entry from the server's client database (clientdblist).
 // Unlike the live client list it also covers clients that are currently
 // offline, with the time they last disconnected.
 type ClientDB struct {
@@ -24,11 +24,16 @@ type ClientDB struct {
 // The server keeps an entry for every client that has ever connected, so
 // this catches even one-second connections that fall between two polls of
 // the live client list.
+//
+// Verified live against the production server (and the ServerQuery
+// manual): the command is "clientdblist" (one word) and the last-seen
+// timestamp is "client_lastconnected"; the connection count is
+// "client_totalconnections". Entries are separated by "|".
 func GetClientDB(cfg *config.Config, ssh *SSHClient) ([]ClientDB, error) {
 
-	raw, err := ssh.Exec("clientdb list")
+	raw, err := ssh.Exec("clientdblist")
 	if err != nil {
-		return nil, fmt.Errorf("failed to execute clientdb list: %w", err)
+		return nil, fmt.Errorf("failed to execute clientdblist: %w", err)
 	}
 
 	parts := strings.Split(strings.TrimSpace(raw), "|")
@@ -57,9 +62,9 @@ func GetClientDB(cfg *config.Config, ssh *SSHClient) ([]ClientDB, error) {
 				cl.LastNickname = val
 			case "client_country":
 				cl.Country = val
-			case "client_num_seen":
+			case "client_totalconnections", "client_num_seen":
 				cl.NumSeen, _ = strconv.ParseInt(val, 10, 64)
-			case "client_last_seen":
+			case "client_lastconnected", "client_last_seen":
 				cl.LastSeenUnix, _ = strconv.ParseInt(val, 10, 64)
 			}
 		}

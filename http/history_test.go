@@ -5,9 +5,11 @@ import (
 	"time"
 )
 
-// TestHistorySampleDedup checks that two observations within the sample gap
-// refresh the last point instead of appending a duplicate.
-func TestHistorySampleDedup(t *testing.T) {
+// TestHistorySampleDedupSameCount checks that a repeat of the current count
+// inside the sample gap is dropped (two tabs polling within seconds must not
+// create two identical points), and that it does NOT overwrite the existing
+// point.
+func TestHistorySampleDedupSameCount(t *testing.T) {
 	saved := onlineHistory
 	onlineHistory = nil
 	defer func() { onlineHistory = saved }()
@@ -15,18 +17,39 @@ func TestHistorySampleDedup(t *testing.T) {
 	now := time.Now().Unix()
 
 	sampleHistory(3, now-100)
-	sampleHistory(4, now-95) // 5 s gap → refresh the last point
+	sampleHistory(3, now-95) // 5 s gap, same count → drop the repeat
 
 	if len(onlineHistory) != 1 {
-		t.Fatalf("expected 1 sample after dedup, got %d: %+v", len(onlineHistory), onlineHistory)
+		t.Fatalf("expected 1 sample after same-count dedup, got %d: %+v", len(onlineHistory), onlineHistory)
 	}
-	if onlineHistory[0].t != now-100 || onlineHistory[0].n != 4 {
-		t.Errorf("last sample = %+v, want t=%d n=4", onlineHistory[0], now-100)
+	if onlineHistory[0].t != now-100 || onlineHistory[0].n != 3 {
+		t.Errorf("sample = %+v, want t=%d n=3 (unchanged)", onlineHistory[0], now-100)
 	}
+}
 
-	sampleHistory(2, now) // 100 s gap → new point
+// TestHistorySampleChangeWithinGap checks the regression where a changed
+// count inside the sample gap overwrote the last point's value at its old
+// timestamp: a changed count must append a fresh point at the current time
+// and leave the previous value intact, so a brief spike is captured at the
+// right moment and never destroys history.
+func TestHistorySampleChangeWithinGap(t *testing.T) {
+	saved := onlineHistory
+	onlineHistory = nil
+	defer func() { onlineHistory = saved }()
+
+	now := time.Now().Unix()
+
+	sampleHistory(3, now-100)
+	sampleHistory(4, now-95) // 5 s gap, count changed → append, do not overwrite
+
 	if len(onlineHistory) != 2 {
-		t.Fatalf("expected 2 samples after new observation, got %d: %+v", len(onlineHistory), onlineHistory)
+		t.Fatalf("expected 2 samples after a count change, got %d: %+v", len(onlineHistory), onlineHistory)
+	}
+	if onlineHistory[0].t != now-100 || onlineHistory[0].n != 3 {
+		t.Errorf("first sample = %+v, want t=%d n=3 (previous value preserved)", onlineHistory[0], now-100)
+	}
+	if onlineHistory[1].t != now-95 || onlineHistory[1].n != 4 {
+		t.Errorf("second sample = %+v, want t=%d n=4 (new point at the change time)", onlineHistory[1], now-95)
 	}
 }
 

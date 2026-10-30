@@ -43,3 +43,4 @@ mockups/
 # Persisted statistics state (recent activity + 24h history), created at runtime
 state.json
 state.json.tmp
+other/

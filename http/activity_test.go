@@ -372,6 +372,51 @@ func TestMergeClientDBNewerSession(t *testing.T) {
 	}
 }
 
+// TestMergeClientDBRepeatedBriefVisit covers a client with two separate
+// short sessions (both too brief to ever be seen live): the log keeps a
+// single entry that moves to the newest visit, and a stale (older)
+// client-database record never pushes it back.
+func TestMergeClientDBRepeatedBriefVisit(t *testing.T) {
+	saved := activityLog
+	activityLog = make(map[string]*activityEntry)
+	defer func() { activityLog = saved }()
+
+	now := time.Now().Unix()
+	t1 := now - 3600 // first short visit
+	t2 := now - 30   // second short visit, later
+
+	mergeClientDB([]ts6.ClientDB{
+		clientDBEntry("uid-max", "Maxallica", "Maxallica", "de", t1),
+	}, now)
+	mergeClientDB([]ts6.ClientDB{
+		clientDBEntry("uid-max", "Maxallica", "Maxallica", "de", t2),
+	}, now)
+
+	if got := len(activityLog); got != 1 {
+		t.Fatalf("want exactly 1 entry for the repeat visitor, got %d: %+v", got, activityLog)
+	}
+	e := activityLog["uid-max"]
+	if e.onlineAt != t2 || e.offlineAt != t2 {
+		t.Errorf("entry must point at the newest visit: onlineAt=%d offlineAt=%d, want %d/%d",
+			e.onlineAt, e.offlineAt, t2, t2)
+	}
+
+	// A stale record (e.g. a duplicate clientdb row) must not move it back.
+	mergeClientDB([]ts6.ClientDB{
+		clientDBEntry("uid-max", "Maxallica", "Maxallica", "de", t1),
+	}, now)
+	if e.onlineAt != t2 || e.offlineAt != t2 {
+		t.Errorf("stale record moved the entry back: onlineAt=%d offlineAt=%d, want %d/%d",
+			e.onlineAt, e.offlineAt, t2, t2)
+	}
+
+	// The rendered row shows the newest last-seen time.
+	result := updateActivity(nil, nil, now)
+	if len(result) != 1 || result[0].LastSeen != view.MakeLastSeen(t2) {
+		t.Errorf("rendered row = %+v, want last seen %d", result, t2)
+	}
+}
+
 // TestMergeClientDBWindow ensures client-database records older than the
 // activity window are ignored, and that an older record never moves an
 // existing entry backwards.

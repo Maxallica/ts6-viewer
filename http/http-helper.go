@@ -44,68 +44,77 @@ func getViewerData(cfg *config.Config, force bool) (view.VMTS6Viewer, error) {
 	}
 
 	log.Println("[HTTP] Fetching new viewer data from TS6 server")
-	sshClient, err := ts6.GetPersistentClient(cfg, cfg.Teamspeak6.ServerID)
-	if err != nil {
-		log.Printf("[HTTP] Failed to get SSH client: %v\n", err)
-		return view.VMTS6Viewer{}, err
-	}
 
-	channels, err := ts6.GetChannelList(cfg, sshClient)
-	if err != nil {
-		log.Printf("[HTTP] Failed to get channels: %v\n", err)
-		return view.VMTS6Viewer{}, err
-	}
+	var (
+		channels   []ts6.Channel
+		snap       statisticsSnapshot
+		info       *ts6.ServerInfo
+		fetchErr   error
+	)
+	// Fetch everything for the display in one pass over the persistent SSH
+	// connection. The statistics fields (clients, clientDB, groupBadges) are
+	// captured in snap so the same observation can be folded into the rolling
+	// statistics state, exactly as the background sampler does.
+	fetchErr = withSSH(cfg, func(ssh *ts6.SSHClient) error {
+		var err error
 
-	clients, err := ts6.GetClientList(cfg, sshClient)
-	if err != nil {
-		log.Printf("[HTTP] Failed to get clients: %v\n", err)
-		return view.VMTS6Viewer{}, err
-	}
-
-	// The server's client database also covers clients that were only
-	// briefly online between polls (they never show up in the live list).
-	// Fetched only while the activity log is on; a failure here degrades
-	// to the old behaviour instead of breaking the viewer.
-	var clientDB []ts6.ClientDB
-	if statsActivityEnabled {
-		clientDB, err = ts6.GetClientDB(cfg, sshClient)
+		channels, err = ts6.GetChannelList(cfg, ssh)
 		if err != nil {
-			log.Printf("[HTTP] Failed to get client database (brief connections not tracked): %v\n", err)
-			clientDB = nil
+			return err
 		}
+
+		snap.clients, err = ts6.GetClientList(cfg, ssh)
+		if err != nil {
+			return err
+		}
+
+		// The server's client database also covers clients that were only
+		// briefly online between observations (they never show up in the
+		// live list). Fetched only while the activity log is on; a failure
+		// here degrades to the live list only instead of breaking the viewer.
+		if statsActivityEnabled {
+			if clientDB, err := ts6.GetClientDB(cfg, ssh); err != nil {
+				log.Printf("[HTTP] Failed to get client database (brief connections not tracked): %v\n", err)
+			} else {
+				snap.clientDB = clientDB
+			}
+		}
+
+		groups, err := ts6.GetServerGroups(cfg, ssh)
+		if err != nil {
+			return err
+		}
+		snap.groupBadges = view.GroupBadgeMap(groups)
+
+		info, err = ts6.GetServerInfo(cfg, ssh)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if fetchErr != nil {
+		log.Printf("[HTTP] Failed to get viewer data: %v\n", fetchErr)
+		return view.VMTS6Viewer{}, fetchErr
 	}
 
-	groups, err := ts6.GetServerGroups(cfg, sshClient)
-	if err != nil {
-		log.Printf("[HTTP] Failed to get servergroups: %v\n", err)
-		return view.VMTS6Viewer{}, err
-	}
+	now := time.Now().Unix()
 
-	info, err := ts6.GetServerInfo(cfg, sshClient)
-	if err != nil {
-		log.Printf("[HTTP] Failed to get server info: %v\n", err)
-		return view.VMTS6Viewer{}, err
-	}
+	// Fold this observation into the rolling statistics state and persist,
+	// on the same code path as the background sampler. A brief session is
+	// therefore recorded identically no matter how the observation is
+	// triggered (viewer request or sampler tick), and the reconciled activity
+	// list is reused for the render below.
+	activity := recordStatistics(&snap, now)
 
 	maxWidth := cfg.MaxWidth
 	if maxWidth == "" {
 		maxWidth = "800px"
 	}
 
-	groupBadges := view.GroupBadgeMap(groups)
-
-	now := time.Now().Unix()
-	sampleHistory(len(clients), now)
-
-	// Fold the client database in before the log is reconciled and
-	// rendered, so brief connections that the live list never saw are
-	// recorded as offline entries with the server's last-seen time.
-	mergeClientDB(clientDB, now)
-
 	vmTS6Viewer := view.VMTS6Viewer{
-		VMServer:        view.BuildVMServer(cfg, info, clients),
-		VMChannels:      view.BuildVMChannels(channels, clients, groupBadges),
-		VMActivity:      updateActivity(clients, groupBadges, now),
+		VMServer:        view.BuildVMServer(cfg, info, snap.clients),
+		VMChannels:      view.BuildVMChannels(channels, snap.clients, snap.groupBadges),
+		VMActivity:      activity,
 		VMHistory:       onlineHistoryFor(now),
 		VMStats:         statsViewModel(),
 		RefreshInterval: cfg.RefreshInterval,
@@ -114,9 +123,8 @@ func getViewerData(cfg *config.Config, force bool) (view.VMTS6Viewer, error) {
 
 	cacheData = vmTS6Viewer
 	cacheTimestamp = time.Now()
-	// Persist the statistics state so it survives a server restart.
-	// mu is held for the whole fetch, so the snapshot is consistent.
-	saveState()
+	// The statistics state was already persisted by recordStatistics (mu is
+	// held for the whole fetch, so the snapshot is consistent).
 	log.Println("[HTTP] Viewer data updated and cached")
 
 	return vmTS6Viewer, nil

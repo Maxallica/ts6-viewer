@@ -4,8 +4,11 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
+
+	"ts6-viewer/internal/ts6"
 )
 
 // saveStateGlobals snapshots the package-level state that the persistence
@@ -129,6 +132,59 @@ func TestLoadStateMissingFile(t *testing.T) {
 	if len(activityLog) != 0 || len(onlineHistory) != 0 {
 		t.Errorf("expected empty state after first start, got %d entries / %d samples",
 			len(activityLog), len(onlineHistory))
+	}
+}
+
+// TestStateSamplerContinuity pins the restart + observation flow: state
+// persisted by the previous run must survive the restart and be built upon
+// by the next observation (graph appends, activity log retained) — so a
+// session that ended before a server restart is not lost.
+func TestStateSamplerContinuity(t *testing.T) {
+	saveStateGlobals(t)
+	now := time.Now().Unix()
+	old := now - 120 // a short session that ended before the restart
+
+	// The previous run persisted this state.
+	activityLog["uid-keep"] = &activityEntry{
+		nickname: "Keep", onlineAt: old, offlineAt: old,
+	}
+	onlineHistory = []historySample{{t: old, n: 2}}
+	saveState()
+
+	// Simulate the restart: in-memory state is wiped, then restored.
+	activityLog = make(map[string]*activityEntry)
+	onlineHistory = nil
+	loadState()
+
+	// The sampler's next observation after the restart.
+	snap := &statisticsSnapshot{
+		clients: []ts6.Client{
+			activityClientAt("Fresh", "uid-fresh", now-60),
+		},
+	}
+	recordStatistics(snap, now)
+
+	// The loaded entry is retained next to the new one.
+	if len(activityLog) != 2 {
+		t.Fatalf("want 2 activity entries after the new observation, got %d: %+v",
+			len(activityLog), activityLog)
+	}
+	if e := activityLog["uid-keep"]; e == nil || e.onlineAt != old || e.offlineAt != old {
+		t.Errorf("pre-restart entry lost or mutated: %+v", e)
+	}
+
+	// The graph carries the pre-restart point plus the new one.
+	if len(onlineHistory) != 2 || onlineHistory[0].t != old || onlineHistory[1].t != now {
+		t.Fatalf("history = %+v, want the old point plus one new point at %d", onlineHistory, now)
+	}
+
+	// And the combined state is persisted again.
+	raw, err := os.ReadFile(stateFile)
+	if err != nil {
+		t.Fatalf("state file was not written: %v", err)
+	}
+	if !strings.Contains(string(raw), "Keep") || !strings.Contains(string(raw), "Fresh") {
+		t.Errorf("persisted state must contain both entries: %s", raw)
 	}
 }
 
