@@ -2,19 +2,22 @@ package http
 
 import (
 	"testing"
+	"time"
 
 	"ts6-viewer/internal/config"
 )
 
 // TestParseStatsConfigDefaults ensures that missing statistics settings keep
-// the defaults: graph on, activity on, 1m max range, and the Online Clients
-// graph NOT mirrored onto the main page.
+// the defaults: graph on, activity on, 24h activity max range, 1m graph max
+// range, and the Online Clients graph NOT mirrored onto the main page.
 func TestParseStatsConfigDefaults(t *testing.T) {
 	savedGraph := statsGraphEnabled
 	savedActivity := statsActivityEnabled
 	savedMaxRange := statsMaxRange
 	savedMain := statsShowOnMainPage
 	savedLimit := activityLimit
+	savedActivityMaxRange := statsActivityMaxRange
+	savedRetention := activityWindow
 	savedWindow := historyWindow
 	defer func() {
 		statsGraphEnabled = savedGraph
@@ -22,6 +25,8 @@ func TestParseStatsConfigDefaults(t *testing.T) {
 		statsMaxRange = savedMaxRange
 		statsShowOnMainPage = savedMain
 		activityLimit = savedLimit
+		statsActivityMaxRange = savedActivityMaxRange
+		activityWindow = savedRetention
 		historyWindow = savedWindow
 	}()
 
@@ -32,6 +37,12 @@ func TestParseStatsConfigDefaults(t *testing.T) {
 	}
 	if !statsActivityEnabled {
 		t.Error("expected recent activity to be enabled by default")
+	}
+	if statsActivityMaxRange != "24h" {
+		t.Errorf("expected default activity max range 24h, got %q", statsActivityMaxRange)
+	}
+	if activityWindow != 24*time.Hour {
+		t.Errorf("expected default activity retention 24h, got %v", activityWindow)
 	}
 	if statsMaxRange != "1m" {
 		t.Errorf("expected default max range 1m, got %q", statsMaxRange)
@@ -75,19 +86,23 @@ func TestParseStatsConfigToggles(t *testing.T) {
 	savedActivity := statsActivityEnabled
 	savedMaxRange := statsMaxRange
 	savedLimit := activityLimit
+	savedActivityMaxRange := statsActivityMaxRange
+	savedRetention := activityWindow
 	savedWindow := historyWindow
 	defer func() {
 		statsGraphEnabled = savedGraph
 		statsActivityEnabled = savedActivity
 		statsMaxRange = savedMaxRange
 		activityLimit = savedLimit
+		statsActivityMaxRange = savedActivityMaxRange
+		activityWindow = savedRetention
 		historyWindow = savedWindow
 	}()
 
 	cfg := config.Config{}
 	cfg.Statistics.Graph = "false"
 	cfg.Statistics.Activity = "false"
-	cfg.Statistics.MaxRange = "9d" // not a valid range
+	cfg.Statistics.MaxRange = "9d"       // not a valid range
 	cfg.Statistics.ActivityLimit = "abc" // not a number
 
 	parseStatsConfig(cfg)
@@ -103,5 +118,87 @@ func TestParseStatsConfigToggles(t *testing.T) {
 	}
 	if activityLimit != 10 {
 		t.Errorf("expected an invalid limit to keep the default 10, got %d", activityLimit)
+	}
+}
+
+// TestParseStatsConfigActivityMaxRange pins the recent_activity_max_range
+// rule: each valid key maps to its retention duration (case-insensitive),
+// and an invalid key keeps the 24h default.
+func TestParseStatsConfigActivityMaxRange(t *testing.T) {
+	savedKey := statsActivityMaxRange
+	savedRetention := activityWindow
+	defer func() {
+		statsActivityMaxRange = savedKey
+		activityWindow = savedRetention
+	}()
+
+	cases := []struct {
+		key     string
+		wantKey string
+		wantDur time.Duration
+	}{
+		{"24h", "24h", 24 * time.Hour},
+		{"7d", "7d", 7 * 24 * time.Hour},
+		{"14d", "14d", 14 * 24 * time.Hour},
+		{"1m", "1m", 31 * 24 * time.Hour},
+		{" 1M ", "1m", 31 * 24 * time.Hour}, // case-insensitive, trimmed
+		{"48h", "24h", 24 * time.Hour},      // not a graph range → default kept
+		{"9d", "24h", 24 * time.Hour},       // invalid → default kept
+		{"", "24h", 24 * time.Hour},         // missing → default kept
+	}
+
+	for _, c := range cases {
+		statsActivityMaxRange = "24h"
+		activityWindow = 24 * time.Hour
+		cfg := config.Config{}
+		cfg.Statistics.ActivityMaxRange = c.key
+		parseStatsConfig(cfg)
+		if statsActivityMaxRange != c.wantKey {
+			t.Errorf("key %q: range key = %q, want %q", c.key, statsActivityMaxRange, c.wantKey)
+		}
+		if activityWindow != c.wantDur {
+			t.Errorf("key %q: retention = %v, want %v", c.key, activityWindow, c.wantDur)
+		}
+	}
+}
+
+// TestStatsViewModelActivityRanges pins the button rule: only the ranges
+// whose retention fits the configured max range are offered, in ascending
+// order — so the default 24h shows a single button and 1m shows all four.
+func TestStatsViewModelActivityRanges(t *testing.T) {
+	savedKey := statsActivityMaxRange
+	savedRetention := activityWindow
+	defer func() {
+		statsActivityMaxRange = savedKey
+		activityWindow = savedRetention
+	}()
+
+	cases := []struct {
+		key  string
+		want []string
+	}{
+		{"24h", []string{"24h"}},
+		{"7d", []string{"24h", "7d"}},
+		{"14d", []string{"24h", "7d", "14d"}},
+		{"1m", []string{"24h", "7d", "14d", "1m"}},
+	}
+
+	for _, c := range cases {
+		statsActivityMaxRange = c.key
+		activityWindow = rangeWindows[c.key]
+		stats := statsViewModel()
+		if len(stats.ActivityRanges) != len(c.want) {
+			t.Errorf("max range %q: ranges = %v, want %v", c.key, stats.ActivityRanges, c.want)
+			continue
+		}
+		for i := range c.want {
+			if stats.ActivityRanges[i] != c.want[i] {
+				t.Errorf("max range %q: range %d = %q, want %q", c.key, i, stats.ActivityRanges[i], c.want[i])
+				break
+			}
+		}
+		if stats.ActivityMaxRange != c.key {
+			t.Errorf("max range %q: model = %q", c.key, stats.ActivityMaxRange)
+		}
 	}
 }

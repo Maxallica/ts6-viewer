@@ -8,8 +8,12 @@ import (
 	"ts6-viewer/internal/view"
 )
 
-// activityWindow is how long recent-activity entries are kept.
-const activityWindow = 24 * time.Hour
+// activityWindow is how long recent-activity entries are kept. It is a var
+// because the config's recent_activity_max_range ("24h" | "7d" | "14d" | "1m")
+// overrides it at startup; the default is 24h. It is the retention required
+// by the largest enabled range button: the server keeps exactly that much
+// history, the client narrows the list to the selected button.
+var activityWindow = 24 * time.Hour
 
 // clientdbCutoffUnix returns the oldest last-seen timestamp still worth
 // recording, in unix seconds.
@@ -38,11 +42,13 @@ func connectionUnix(raw string) int64 {
 	return ts
 }
 
-// activityLog is the rolling 24h recent-activity list. Guarded by mu
+// activityLog is the rolling recent-activity list (retention set by the
+// recent_activity_max_range config; 24h by default). Guarded by mu
 // (getViewerData holds it for the whole fetch).
 var activityLog = make(map[string]*activityEntry)
 
-// activityLimit caps the displayed list (set from config); 0 = unlimited.
+// activityLimit caps the displayed list (set from config, applied by the
+// client); 0 = unlimited.
 var activityLimit = 10
 
 // eventTime returns the timestamp that orders an entry in the merged,
@@ -209,11 +215,8 @@ func updateActivity(clients []ts6.Client, groupBadges map[string]string, now int
 		})
 	}
 
-	// Cap the displayed list (0 = unlimited). The full log stays persisted,
-	// so the cap only affects the display.
-	if activityLimit > 0 && len(result) > activityLimit {
-		result = result[:activityLimit]
-	}
-
+	// The full retained list is sent to the client: it narrows it to the
+	// selected range button and applies the display cap (activityLimit)
+	// itself, so the cap must not be applied here.
 	return result
 }

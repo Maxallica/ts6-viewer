@@ -376,9 +376,13 @@ func TestMergeClientDBNewerSession(t *testing.T) {
 // activity window are ignored, and that an older record never moves an
 // existing entry backwards.
 func TestMergeClientDBWindow(t *testing.T) {
-	saved := activityLog
+	savedLog := activityLog
 	activityLog = make(map[string]*activityEntry)
-	defer func() { activityLog = saved }()
+	defer func() { activityLog = savedLog }()
+
+	savedWindow := activityWindow
+	activityWindow = 24 * time.Hour
+	defer func() { activityWindow = savedWindow }()
 
 	now := time.Now().Unix()
 	old := now - 48*3600 // outside the 24h window
@@ -403,5 +407,32 @@ func TestMergeClientDBWindow(t *testing.T) {
 
 	if got := activityLog["uid-bob"].offlineAt; got != now-3600 {
 		t.Errorf("offlineAt = %d, want %d (no backward move)", got, now-3600)
+	}
+}
+
+// TestUpdateActivitySendsFullRetainedList pins the v2 contract: the server
+// no longer applies the display cap, it sends every entry inside the
+// retention window so the client can narrow it to the selected range button.
+func TestUpdateActivitySendsFullRetainedList(t *testing.T) {
+	savedLog := activityLog
+	activityLog = make(map[string]*activityEntry)
+	defer func() { activityLog = savedLog }()
+
+	savedLimit := activityLimit
+	activityLimit = 2 // would cap at 2 if applied server-side
+	defer func() { activityLimit = savedLimit }()
+
+	now := time.Now().Unix()
+	clients := []ts6.Client{
+		activityClientAt("One", "uid-one", now-3600),
+		activityClientAt("Two", "uid-two", now-7200),
+		activityClientAt("Three", "uid-three", now-10800),
+	}
+
+	result := updateActivity(clients, nil, now)
+
+	if len(result) != 3 {
+		t.Fatalf("got %d entries, want 3 (cap must not be applied server-side): %+v",
+			len(result), result)
 	}
 }

@@ -42,7 +42,7 @@ the **statistics view** (toggle button in the header). With
 the server info instead — the statistics view then only contains the
 activity log, so the graph never appears twice.
 
-- Smooth line (monotone cubic, no steps, no overshoot) + area fill in TeamSpeak blue.
+- Straight line (one segment between consecutive points, no smoothing) + area fill in TeamSpeak blue.
 - **Hover tooltip:** moving the mouse over the graph snaps to the nearest
   sample and shows the exact client count plus its time (clock time for the
   `24 h` range, date + clock for longer ranges) with a marker and guideline.
@@ -80,6 +80,12 @@ it is not displayed on the main page (the toggle switches back). The log is
   client lacks `clientdb` permission, tracking degrades to the live list only.
 - Limited to the last **10 entries by default** (`recent_activity_limit`,
   `0` = unlimited).
+- **Range selection like the graph** (`recent_activity_max_range`): the
+  header offers clickable range buttons — `24h` | `7d` | `14d` | `1m` — and
+  the key sets the largest one (smaller ones stay available). The choice is
+  per browser (localStorage) and starts at `24h`, so by default only the
+  `24h` button is shown; entries are kept as long as the largest enabled
+  range requires.
 
 ### Statistics Configuration
 
@@ -92,6 +98,7 @@ unchanged. New keys live in the `statistics` block:
   "graph_max_range": "1m",
   "show_on_main_page": "false",
   "recent_activity": "true",
+  "recent_activity_max_range": "24h",
   "recent_activity_limit": "10"
 }
 ```
@@ -102,11 +109,12 @@ unchanged. New keys live in the `statistics` block:
 | `statistics.graph_max_range` | Largest graph range: `24h` \| `7d` \| `14d` \| `1m` (also sets history retention) | `1m` |
 | `statistics.show_on_main_page` | Show the graph on the main page below the server info — it is then not shown again in the statistics view (`true`/`false`) | `false` |
 | `statistics.recent_activity` | Show the Recent Activity log (`true`/`false`) | `true` |
+| `statistics.recent_activity_max_range` | Largest activity range button: `24h` \| `7d` \| `14d` \| `1m` (also sets retention, like the graph) | `24h` |
 | `statistics.recent_activity_limit` | Number of entries to show, `0` = unlimited | `10` |
 
 Docker environment variables (same defaults): `STATS_GRAPH`,
 `STATS_GRAPH_MAX_RANGE`, `STATS_SHOW_ON_MAIN_PAGE`, `STATS_RECENT_ACTIVITY`,
-`STATS_RECENT_ACTIVITY_LIMIT`.
+`STATS_RECENT_ACTIVITY_MAX_RANGE`, `STATS_RECENT_ACTIVITY_LIMIT`.
 
 Timestamps in the Recent Activity log are displayed in the **viewer's own
 time zone**: the raw unix timestamps are stored and sent as absolute
@@ -224,6 +232,7 @@ Environment variables include:
 - STATS_GRAPH_MAX_RANGE (`24h` | `7d` | `14d` | `1m`; default `1m`)
 - STATS_SHOW_ON_MAIN_PAGE (also show the graph on the main page; default `false`)
 - STATS_RECENT_ACTIVITY (show the Recent Activity log; default `true`)
+- STATS_RECENT_ACTIVITY_MAX_RANGE (largest activity range `24h` | `7d` | `14d` | `1m`; default `24h`)
 - STATS_RECENT_ACTIVITY_LIMIT (entry count, `0` = unlimited; default `10`)
 
 This makes the Docker container fully configurable without editing files.

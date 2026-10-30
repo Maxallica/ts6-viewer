@@ -386,7 +386,7 @@ const GRAPH_RANGES = {
 // Bucket size (seconds, matching the unix-seconds timestamps of the
 // history payload) per range. Before drawing, the raw samples are
 // aggregated into fixed wall-clock buckets (average online count per
-// bucket) so the shape of the curve no longer depends on how often the
+// bucket) so the shape of the line no longer depends on how often the
 // page happened to be polled: the 0/1 oscillation of quiet hours
 // averages out, and fast evening jumps are spread over their bucket
 // instead of drawing as near-vertical steps. Buckets are anchored at
@@ -403,6 +403,12 @@ const GRAPH_RANGE_KEY = "ts6viewer-graph-range";
 const GRAPH_RANGE_DEFAULT = "24h";
 let graphRange = GRAPH_RANGE_DEFAULT; // narrowed to the server's list on load
 let lastHistory = []; // latest history payload, re-rendered on range change
+
+const ACTIVITY_RANGE_KEY = "ts6viewer-activity-range";
+const ACTIVITY_RANGE_DEFAULT = "24h";
+let activityRange = ACTIVITY_RANGE_DEFAULT; // narrowed to the server's list on load
+let statsActivityLimit = 0; // recent_activity_limit, 0 = unlimited (from the template)
+let lastActivity = []; // latest activity payload, re-rendered on range change
 
 function graphClock(ts) {
     const t = new Date(ts);
@@ -436,65 +442,6 @@ function graphTicks(rangeMs, now) {
         for (let d = 31; d >= 0; d -= 7) push(d);
     }
     return ticks;
-}
-
-// Smooth a polyline into a monotone cubic curve (Fritsch–Carlson): the
-// result passes exactly through every point, has no overshoot (never
-// leaves the data's own min/max), and — unlike a step chart or a plain
-// polyline — shows no flat steps or sharp corners: each pair of
-// consecutive samples is joined by one smooth, flowing span.
-// pts: [[x, y], ...] (x strictly increasing). Returns an SVG path d.
-function smoothPathD(pts) {
-    const n = pts.length;
-    if (n < 2) {
-        return "M" + pts[0][0].toFixed(1) + " " + pts[0][1].toFixed(1);
-    }
-
-    // 1) Secant slopes between consecutive points.
-    const dx = [];
-    const m = [];
-    for (let i = 0; i < n - 1; i++) {
-        dx[i] = pts[i + 1][0] - pts[i][0];
-        m[i] = (pts[i + 1][1] - pts[i][1]) / dx[i];
-    }
-
-    // 2) Interior tangent slopes: flat at direction changes, otherwise the
-    //    average of the neighboring secants, then clamped per span so the
-    //    cubic Hermite stays monotone (inside the data's range).
-    const t = new Array(n);
-    t[0] = m[0]; // endpoint tangent: free to differ from the interior ones
-    t[n - 1] = m[n - 2];
-    for (let i = 1; i < n - 1; i++) {
-        t[i] = m[i - 1] * m[i] <= 0 ? 0 : (m[i - 1] + m[i]) / 2;
-    }
-    for (let i = 0; i < n - 1; i++) {
-        if (m[i] === 0) {
-            if (i > 0) t[i] = 0;
-            if (i + 1 < n - 1) t[i + 1] = 0;
-        } else {
-            const a = t[i] / m[i];
-            const b = t[i + 1] / m[i];
-            const s = a * a + b * b;
-            if (s > 9) {
-                const f = 3 / Math.sqrt(s);
-                if (i > 0) t[i] = f * a * m[i];
-                if (i + 1 < n - 1) t[i + 1] = f * b * m[i];
-            }
-        }
-    }
-
-    // 3) Emit cubic Beziers; control points sit at 1/3 and 2/3 of the span.
-    let d = "M" + pts[0][0].toFixed(1) + " " + pts[0][1].toFixed(1);
-    for (let i = 0; i < n - 1; i++) {
-        const h = dx[i] / 3;
-        const tin = t[i];
-        const tout = t[i + 1];
-        d += "C" +
-            (pts[i][0] + h).toFixed(1) + " " + (pts[i][1] + h * tin).toFixed(1) + " " +
-            (pts[i + 1][0] - h).toFixed(1) + " " + (pts[i + 1][1] - h * tout).toFixed(1) + " " +
-            pts[i + 1][0].toFixed(1) + " " + pts[i + 1][1].toFixed(1);
-    }
-    return d;
 }
 
 // Round the max count up to a "nice" scale (steps of 1/2/5 × 10^n, always
@@ -655,13 +602,16 @@ function renderHistoryGraph(history) {
         series += '<circle class="graph-dot" cx="' + px + '" cy="' + py + '" r="2.5"/>';
         pts = [[samples[0].T, +px, +py]];
     } else if (samples.length >= 2) {
-        // Smooth line through the bucket points: one monotone cubic span
-        // per consecutive pair (passes every point, no corners, no
-        // overshoot). Even, uniform span widths keep the curve calm no
-        // matter how densely the raw samples were spaced.
+        // Straight line through the bucket points: one direct segment per
+        // consecutive pair (passes every point). Deliberately NOT smoothed —
+        // a curve between the points would bulge above or below the data
+        // and suggest values nobody was actually online.
         pts = samples.map((p) => [p.T, sx(p.T * 1000), sy(p.N)]);
         const raw = pts.map((p) => [p[1], p[2]]);
-        const d = smoothPathD(raw);
+        let d = "M" + raw[0][0].toFixed(1) + " " + raw[0][1].toFixed(1);
+        for (let i = 1; i < raw.length; i++) {
+            d += "L" + raw[i][0].toFixed(1) + " " + raw[i][1].toFixed(1);
+        }
         const first = raw[0][0].toFixed(1);
         const last = raw[raw.length - 1][0].toFixed(1);
         series += '<path class="graph-area" d="' + d + "L" + last + " " + y1 + "L" + first + " " + y1 + 'Z"/>';
@@ -752,6 +702,62 @@ function initGraphRanges() {
             localStorage.setItem(GRAPH_RANGE_KEY, graphRange);
             syncButtons();
             renderGraphBodies();
+        });
+    });
+}
+
+// Range buttons for the Recent Activity header: same pattern as the graph
+// (show the ranges the server allows, persist the user's choice), but the
+// choice only narrows the already-fetched list instead of re-querying.
+function initActivityRanges() {
+    const holders = Array.from(document.querySelectorAll(".activity-ranges"));
+    if (holders.length === 0) {
+        return; // recent-activity section disabled by config
+    }
+
+    statsActivityLimit = Number(holders[0].dataset.limit) || 0; // 0 = unlimited
+
+    const allowed = (holders[0].dataset.ranges || "")
+        .split(",")
+        .map((r) => r.trim())
+        .filter((r) => GRAPH_RANGES[r]);
+    if (allowed.length === 0) {
+        return;
+    }
+
+    // Restore the saved range if still allowed, otherwise the default.
+    const saved = localStorage.getItem(ACTIVITY_RANGE_KEY);
+    activityRange = allowed.includes(saved) ? saved : ACTIVITY_RANGE_DEFAULT;
+    if (!allowed.includes(activityRange)) {
+        activityRange = allowed[0];
+    }
+
+    const syncButtons = () => {
+        // Unlike the graph panel, always render the buttons even when only one
+        // range is allowed (default config) so the active range stays visible.
+        document.querySelectorAll(".activity-ranges").forEach((holder) => {
+            holder.innerHTML = allowed
+                .map((r) =>
+                    '<button type="button" class="graph-range" data-range="' + r +
+                    '" aria-pressed="' + (r === activityRange) + '">' + r + "</button>"
+                )
+                .join("");
+            holder.querySelector('[data-range="' + activityRange + '"]').classList.add("active");
+        });
+    };
+
+    syncButtons();
+
+    document.querySelectorAll(".activity-ranges").forEach((holder) => {
+        holder.addEventListener("click", (e) => {
+            const btn = e.target.closest(".graph-range");
+            if (!btn || btn.dataset.range === activityRange) {
+                return;
+            }
+            activityRange = btn.dataset.range;
+            localStorage.setItem(ACTIVITY_RANGE_KEY, activityRange);
+            syncButtons();
+            renderActivityList();
         });
     });
 }
@@ -871,7 +877,33 @@ function updateStatsPanel(activity) {
     if (!list) {
         return;
     }
-    list.innerHTML = (activity || []).map(renderStatCell).join("");
+    lastActivity = activity || [];
+    renderActivityList();
+}
+
+// Timestamp (unix seconds) that orders an activity entry: the connection
+// start for online clients, the last confirmed-online time for offline
+// clients (both what is displayed) — mirrors the server's eventTime.
+function activityEventTime(a) {
+    return (a.Online && a.ConnectedAtUnix) || a.LastSeenAt || 0;
+}
+
+// Render the retained activity list narrowed to the selected range button,
+// then apply the configured display cap (0 = unlimited). The server already
+// keeps only the retention of the largest enabled range.
+function renderActivityList() {
+    const list = document.getElementById("activityList");
+    if (!list) {
+        return;
+    }
+    // GRAPH_RANGES are milliseconds, but activityEventTime() returns unix
+    // SECONDS — convert the range to seconds so the comparison is consistent.
+    const rangeSec = (GRAPH_RANGES[activityRange] || GRAPH_RANGES["24h"]) / 1000;
+    const cutoff = Date.now() / 1000 - rangeSec;
+    const visible = lastActivity
+        .filter((a) => activityEventTime(a) >= cutoff)
+        .slice(0, statsActivityLimit > 0 ? statsActivityLimit : undefined);
+    list.innerHTML = visible.map(renderStatCell).join("");
 }
 
 function initStatsToggle() {
@@ -1058,6 +1090,7 @@ function initOnlineTooltip() {
 // ==========================================
 window.addEventListener("load", () => {
     initGraphRanges();
+    initActivityRanges();
     fetchViewerData();
     initGraphHover();
     initOnlineTooltip();

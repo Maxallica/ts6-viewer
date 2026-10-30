@@ -182,7 +182,11 @@
     {{end}}
     {{if .VMStats.ActivityEnabled}}
     <div class="stats-head">
-        <h2>Recent Activity</h2>
+        <h2>Recent Activity{{if gt .VMStats.ActivityLimit 0}} (last {{.VMStats.ActivityLimit}} entries){{end}}</h2>
+        <span class="activity-ranges" role="group" aria-label="Activity time range"
+              data-ranges="{{range $i, $r := .VMStats.ActivityRanges}}{{if $i}},{{end}}{{$r}}{{end}}"
+              data-max-range="{{.VMStats.ActivityMaxRange}}"
+              data-limit="{{.VMStats.ActivityLimit}}"></span>
     </div>
     <div id="activityList">
         {{range .VMActivity}}

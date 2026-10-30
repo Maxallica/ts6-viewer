@@ -80,13 +80,18 @@ func TestStateRoundTrip(t *testing.T) {
 }
 
 // TestLoadStatePrunesStale pins that entries and samples already outside
-// their windows are dropped while loading. The history window is set
-// explicitly (24h) so the test does not depend on the default.
+// their windows are dropped while loading. Both windows are set explicitly
+// (24h) so the test does not depend on the defaults.
 func TestLoadStatePrunesStale(t *testing.T) {
 	saveStateGlobals(t)
-	savedWindow := historyWindow
+	savedHistory := historyWindow
+	savedActivity := activityWindow
 	historyWindow = 24 * time.Hour
-	t.Cleanup(func() { historyWindow = savedWindow })
+	activityWindow = 24 * time.Hour
+	t.Cleanup(func() {
+		historyWindow = savedHistory
+		activityWindow = savedActivity
+	})
 	now := time.Now().Unix()
 	stale := now - int64(25*time.Hour/time.Second)
 

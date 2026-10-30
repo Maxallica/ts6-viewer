@@ -47,6 +47,9 @@
     "recent_activity": "${STATS_RECENT_ACTIVITY}",
     "_comment_recent_activity": "Show the Recent Activity list ('true'/'false'). Default: 'true'.",
 
+    "recent_activity_max_range": "${STATS_RECENT_ACTIVITY_MAX_RANGE}",
+    "_comment_recent_activity_max_range": "Largest Recent Activity range to offer: '24h' | '7d' | '14d' | '1m'. Smaller ranges always stay available as buttons. This also sets how long entries are kept (1m ≈ 31 days). Default: '24h'.",
+
     "recent_activity_limit": "${STATS_RECENT_ACTIVITY_LIMIT}",
     "_comment_recent_activity_limit": "Number of Recent Activity entries to display, '0' = unlimited. Default: '10'."
   }

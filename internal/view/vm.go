@@ -11,14 +11,18 @@ type VMTS6Viewer struct {
 }
 
 // VMStats carries the operator's statistics display settings to the client:
-// which sections are enabled, which graph time ranges are available, and
-// whether the Online Clients graph is mirrored onto the main page.
+// which sections are enabled, which graph and activity time ranges are
+// available, the recent-activity display cap, and whether the Online Clients
+// graph is mirrored onto the main page.
 type VMStats struct {
-	GraphEnabled    bool
-	ActivityEnabled bool
-	MaxRange        string   // one of "24h" | "7d" | "14d" | "1m"
-	Ranges          []string // enabled ranges, ordered ascending (subset of the above)
-	ShowOnMainPage  bool     // also render the Online Clients graph below the server info
+	GraphEnabled     bool
+	ActivityEnabled  bool
+	ActivityLimit    int      // recent_activity_limit, 0 = unlimited
+	ActivityMaxRange string   // one of "24h" | "7d" | "14d" | "1m" (largest button shown)
+	ActivityRanges   []string // enabled activity ranges, ordered ascending (subset)
+	MaxRange         string   // one of "24h" | "7d" | "14d" | "1m"
+	Ranges           []string // enabled graph ranges, ordered ascending (subset of the above)
+	ShowOnMainPage   bool     // also render the Online Clients graph below the server info
 }
 
 // VMHistoryPoint is one observation of the rolling online-count graph:

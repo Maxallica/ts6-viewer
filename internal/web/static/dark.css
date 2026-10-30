@@ -372,8 +372,10 @@ h1, h2 {
     margin-top: 12px;
 }
 
-/* Time-range buttons (24h / 7d / 14d / 1m) in the graph header */
-.graph-ranges {
+/* Time-range buttons (24h / 7d / 14d / 1m) in the graph and the
+   Recent Activity headers */
+.graph-ranges,
+.activity-ranges {
     display: inline-flex;
     gap: 4px;
 }

@@ -28,6 +28,7 @@ services:
       # STATS_GRAPH_MAX_RANGE: "1m"       # 24h | 7d | 14d | 1m (also sets history retention)
       # STATS_SHOW_ON_MAIN_PAGE: "false"  # graph on the main page (not again in the statistics view)
       # STATS_RECENT_ACTIVITY: "true"      # show the Recent Activity list
+      # STATS_RECENT_ACTIVITY_MAX_RANGE: "24h" # 24h | 7d | 14d | 1m (also sets retention)
       # STATS_RECENT_ACTIVITY_LIMIT: "10"  # entries to show, 0 = unlimited
 
       # Persisted statistics state (recent activity + graph history)

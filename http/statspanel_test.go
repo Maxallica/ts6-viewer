@@ -33,10 +33,13 @@ func TestStatsPanelOfflineRender(t *testing.T) {
 		RefreshInterval: "60",
 		MaxWidth:        "1000px",
 		VMStats: &view.VMStats{
-			GraphEnabled:    true,
-			ActivityEnabled: true,
-			MaxRange:        "7d",
-			Ranges:          []string{"24h", "7d"},
+			GraphEnabled:     true,
+			ActivityEnabled:  true,
+			ActivityLimit:    10,
+			ActivityMaxRange: "24h",
+			ActivityRanges:   []string{"24h"},
+			MaxRange:         "7d",
+			Ranges:           []string{"24h", "7d"},
 		},
 		VMActivity: []*view.VMActivity{
 			{Nickname: "Live", Badge: "admin", Country: "DE", ConnectedAt: "10:00", Online: true},
@@ -56,6 +59,10 @@ func TestStatsPanelOfflineRender(t *testing.T) {
 		"since", "last seen", lastSeen,
 		// Graph section (statistics view) with its range buttons.
 		`class="graph-panel"`, `class="graph-ranges"`, `data-ranges="24h,7d"`,
+		// Activity section: entry-count heading and the range-button holder
+		// (single 24h button by default, client-side cap of 10).
+		`Recent Activity (last 10 entries)`,
+		`class="activity-ranges"`, `data-ranges="24h"`, `data-limit="10"`,
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("expected output to contain %q", want)
@@ -80,6 +87,42 @@ func TestStatsPanelOfflineRender(t *testing.T) {
 	// view only, so exactly one graph-panel instance is rendered.
 	if n := strings.Count(out, `class="graph-panel"`); n != 1 {
 		t.Errorf("expected exactly one graph-panel instance, got %d", n)
+	}
+}
+
+// TestStatsPanelHeadingUnlimited pins the heading rule: with an unlimited
+// list (limit 0) the "(last X entries)" part is hidden entirely.
+func TestStatsPanelHeadingUnlimited(t *testing.T) {
+	tmpl := template.Must(template.ParseFiles("../internal/web/templates/ts6viewer.html"))
+
+	data := view.VMTS6Viewer{
+		VMServer:        &view.VMServer{Name: "Test"},
+		RefreshInterval: "60",
+		MaxWidth:        "1000px",
+		VMStats: &view.VMStats{
+			ActivityEnabled:  true,
+			ActivityMaxRange: "24h",
+			ActivityRanges:   []string{"24h"},
+		},
+		VMActivity: []*view.VMActivity{
+			{Nickname: "Live", Online: true},
+		},
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
+		t.Fatalf("template execution failed: %v", err)
+	}
+
+	out := buf.String()
+	if !strings.Contains(out, `Recent Activity</h2>`) {
+		t.Error(`expected a bare "Recent Activity" heading when the limit is 0`)
+	}
+	if strings.Contains(out, "entries") {
+		t.Error(`expected no "(last X entries)" part when the limit is 0`)
+	}
+	if !strings.Contains(out, `data-limit="0"`) {
+		t.Error(`expected data-limit="0" so the client treats the list as unlimited`)
 	}
 }
 

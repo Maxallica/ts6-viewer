@@ -23,19 +23,22 @@ var rangeWindows = map[string]time.Duration{
 }
 
 // Statistics display settings (config with defaults: graph on, activity on,
-// 10 entries [activityLimit, 0 = unlimited], 1m max range → all range
-// buttons and a month of retention, graph NOT mirrored onto the main page).
+// 24h activity max range [statsActivityMaxRange], 10 entries
+// [activityLimit, 0 = unlimited], 1m graph max range → all range buttons and
+// a month of retention, graph NOT mirrored onto the main page).
 var (
-	statsGraphEnabled    = true
-	statsActivityEnabled = true
-	statsMaxRange        = "1m"
-	statsShowOnMainPage  = false
+	statsGraphEnabled     = true
+	statsActivityEnabled  = true
+	statsActivityMaxRange = "24h"
+	statsMaxRange         = "1m"
+	statsShowOnMainPage   = false
 )
 
 // parseStatsConfig applies the operator's statistics settings from the
 // config file. Missing values keep the defaults, so old config files keep
-// working unchanged. graph_max_range controls both the available buttons and
-// the history retention (longer retention only when requested).
+// working unchanged. graph_max_range and recent_activity_max_range each
+// control the available range buttons and the retention they require
+// (longer retention only when requested).
 func parseStatsConfig(cfg config.Config) {
 	if s := strings.ToLower(strings.TrimSpace(cfg.Statistics.Graph)); s == "false" {
 		statsGraphEnabled = false
@@ -47,6 +50,13 @@ func parseStatsConfig(cfg config.Config) {
 	if s := strings.TrimSpace(cfg.Statistics.ActivityLimit); s != "" {
 		if n, err := strconv.Atoi(s); err == nil && n >= 0 {
 			activityLimit = n // 0 = unlimited
+		}
+	}
+
+	if r := strings.ToLower(strings.TrimSpace(cfg.Statistics.ActivityMaxRange)); r != "" {
+		if window, ok := rangeWindows[r]; ok {
+			statsActivityMaxRange = r
+			activityWindow = window
 		}
 	}
 
@@ -64,18 +74,23 @@ func parseStatsConfig(cfg config.Config) {
 }
 
 // statsViewModel builds the client-facing statistics settings (which sections
-// are enabled, which graph time ranges are available, and whether the Online
-// Clients graph is mirrored onto the main page).
+// are enabled, which graph and activity time ranges are available, and
+// whether the Online Clients graph is mirrored onto the main page).
 func statsViewModel() *view.VMStats {
 	stats := &view.VMStats{
 		GraphEnabled:     statsGraphEnabled,
 		ActivityEnabled:  statsActivityEnabled,
+		ActivityLimit:    activityLimit,
+		ActivityMaxRange: statsActivityMaxRange,
 		MaxRange:         statsMaxRange,
 		ShowOnMainPage:   statsShowOnMainPage,
 	}
 	for _, r := range graphRanges {
 		if rangeWindows[r] <= historyWindow {
 			stats.Ranges = append(stats.Ranges, r)
+		}
+		if rangeWindows[r] <= activityWindow {
+			stats.ActivityRanges = append(stats.ActivityRanges, r)
 		}
 	}
 	return stats
